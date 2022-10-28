@@ -1,6 +1,6 @@
 --- 
 title: "University pay off during Covid-19"
-author: "Cheng Duyu, Jincheng Liu, Xindi Deng (Final Project 2)"
+author: "Cheng yudu, Jincheng Liu, Xindi Deng (Final Project 2)"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 ---
