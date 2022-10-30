@@ -23,7 +23,7 @@
 <meta name="author" content="Cheng yudu, Jincheng Liu, Xindi Deng (Final Project 2)" />
 
 
-<meta name="date" content="2022-10-28" />
+<meta name="date" content="2022-10-29" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -108,11 +108,28 @@
             <section class="normal" id="section-">
 <div id="proposal" class="section level1 hasAnchor" number="2">
 <h1><span class="header-section-number">Chapter 2</span> Proposal<a href="proposal.html#proposal" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Group member: jincheng Liu (jl6298), Yudu Chen (yc4142), Xindi Deng (xd2287)</p>
 <div id="research-topic" class="section level2 hasAnchor" number="2.1">
 <h2><span class="header-section-number">2.1</span> Research topic<a href="proposal.html#research-topic" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>The outbreaks of covid-19 have had a big impact on all walks of life since 2019. For many college applicants and their families, one of the topics they care about most is whether, and if so how, the pandemics affect admissions and their future developments after graduation. With reference to college rankings, applicants can get “easy-to-interpret” information about a college. However, that information is limited, and there is something that applicants are really concerned about but can not be captured by the college rankings, such as the admission conditions and average graduate salaries.</p>
+<p>In this project, we aim to help applicants figure out the trends under the pandemic and support them to make well-formulated decisions that maximize their utility from education at this particular time. To reach this goal, we will combine the information on college rankings, college type, admission conditions, tuition fees, average graduate salaries, and so on, to analyze their relationships as well as variations before and after the pandemics.</p>
 </div>
 <div id="data-availability" class="section level2 hasAnchor" number="2.2">
 <h2><span class="header-section-number">2.2</span> Data availability<a href="proposal.html#data-availability" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Our team scourced the data from the “National Center for Education Statistics” maintained by the U.S. Institution of Education Science (IES) .
+The data link is :<a href="https://nces.ed.gov/ipeds/summarytables" class="uri">https://nces.ed.gov/ipeds/summarytables</a></p>
+<p>The data set is dedicated to promote education transparency such that Students and their families are well informed of the cost and benefits of different higher education institutions and therefore are enabled to make better educational decisions.</p>
+<p>The department of education sources their data from “Integrated Postsecondary Education Data System (IPEDS)” questionnaire. All institutions in the U.S. that participate in “Title IV federal student aid programs” are authorized to provide financial assistance to low income students through federal funds. Under the Higher Education Act, the institutions that participate in the program are required to provide annual IPEDS questionnaires, where they report performance related information with veracity. Since institutions are required to fill out IPEDS questionnaires annually, the department of education also archives the data collected annually. The IPEDS archive difference performance related data in separate</p>
+<p>In order to evaluate change of institution performance over the pandemics, the performance information concerns two parts. The first part involves the “cost” of education. The second part involves “benefit” or “performance” of the institution.</p>
+<p>To evaluate trend of institution “cost” over the pandemics, we will use the following information:
+Testing Score (such as SAT and ACT) of admitted students and admission rate. Both are direct measurements of the difficulty of admission, that require educational efforts from the students and their families.
+Tuition. The tuition is a primary concern especially for lower and middle class people during pandemics due to unemployment, inflation, and mortality. Education is a major investment to improve social mobility and therefore is an important cost metric.</p>
+<p>To evaluate the benefits of institutions, we will obtain the following information:
+Student Financial aid. A crucial component of making education accessible to students with financial constraints.
+4 Year graduation rate, the higher the rate the lower the “time cost” is to the students.
+Salary level of graduates.</p>
+<p>Each feature documented in the website of National Center for Education Statistics can be downloaded as a csv file, and we can import these documents directly. Since each university has a unique “unitid” assigned by IPEDS, we can join all features into one integrated table according to this id.</p>
+<p>Our team also obtained the dataset of US university ranking from the QS and Times Top universities. The data imported from QS is in CSV format, and the data is updated annually. We attempt to draw a correlation between our cost-benefit analysis and institution ranking by major media to evaluate validity of the media ranking metrics.</p>
 
 </div>
 </div>
