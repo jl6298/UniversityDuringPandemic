@@ -31,3 +31,5 @@ Salary level of graduates.
 Each feature documented in the website of National Center for Education Statistics can be downloaded as a csv file, and we can import these documents directly. Since each university has a unique “unitid” assigned by IPEDS, we can join all features into one integrated table according to this id.
 
 Our team also obtained the dataset of US university ranking from the QS and Times Top universities. The data imported from QS is in CSV format, and the data is updated annually. We attempt to draw a correlation between our cost-benefit analysis and institution ranking by major media to evaluate validity of the media ranking metrics.
+
+
