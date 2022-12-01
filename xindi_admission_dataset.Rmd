@@ -1,0 +1,197 @@
+---
+title: "xindi_admission_dataset"
+output: html_document
+date: "2022-11-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readxl")
+library("dplyr")
+library("tidyr")
+library("readr")
+library("ggridges")
+library("viridis")
+library("forcats")
+library("ggpubr")
+library('cowplot')
+library('gridExtra')
+library('ggplot2')
+library('ggpubr')
+library('choroplethr')
+library("openintro")
+library('choroplethrMaps')
+```
+
+# Import dataset
+
+```{r}
+University_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
+University_type <- unique(University_type[c("UNITID","CONTROL")]) %>% rename(
+  "University_type" = "CONTROL"
+)
+
+```
+
+```{r}
+Import_SAT <- function(filename, year) {
+  df <- data.frame(read_csv(paste("./data_folder/CollegeScorecard_Raw_Data/", filename, sep=""), show_col_types = FALSE))
+  df <- df[c("UNITID","SATVRMID", "SATMTMID")] %>% rename(
+  "SAT_VR" = "SATVRMID",
+  "SAT_MT" = "SATMTMID") %>% mutate(
+    Year = year
+  ) 
+  df[df == "NULL"] <- NA
+  df <- df %>% filter( rowSums(is.na(df)) == 0)
+  class(df$SAT_VR) = "numeric"
+  class(df$SAT_MT) = "numeric"
+  return <- df
+}
+
+SAT2017 <- Import_SAT("MERGED2017_18_PP.csv", 2017)
+SAT2018 <- Import_SAT("MERGED2018_19_PP.csv", 2018)
+SAT2019 <- Import_SAT("MERGED2019_20_PP.csv", 2019)
+SAT2020 <- Import_SAT("MERGED2020_21_PP.csv", 2020)
+SAT2021 <- Import_SAT("Most-Recent-Cohorts-Institution.csv", 2021)
+
+SAT_score <- rbind(SAT2017, SAT2018, SAT2019, SAT2020, SAT2021)
+```
+
+
+```{r}
+Admission <- data.frame(read_csv("./data_folder/Admission_Data/Admission_2017-2021.csv", show_col_types = FALSE))
+
+#print("Number of missing values")
+#colSums(is.na(Admission)) %>%
+#  sort(decreasing = TRUE)
+
+Admission <- subset(Admission, select = -c(...33) )
+Admission <- Admission %>% filter( rowSums(is.na(Admission)) == 0)
+```
+```{r}
+names(Admission) <- c("UNITID", "Institution_Name", "Applcn_T_2021", "Applcn_M_2021", "Applcn_W_2021", "Admssn_T_2021", "Admssn_M_2021", "Admssn_W_2021", "Applcn_T_2020", "Applcn_M_2020", "Applcn_W_2020", "Admssn_T_2020", "Admssn_M_2020", "Admssn_W_2020", "Applcn_T_2019", "Applcn_M_2019", "Applcn_W_2019", "Admssn_T_2019", "Admssn_M_2019", "Admssn_W_2019", "Applcn_T_2018", "Applcn_M_2018", "Applcn_W_2018", "Admssn_T_2018", "Admssn_M_2018", "Admssn_W_2018", "Applcn_T_2017", "Applcn_M_2017", "Applcn_W_2017", "Admssn_T_2017", "Admssn_M_2017", "Admssn_W_2017")
+
+Admission <- Admission %>% 
+  pivot_longer(
+    cols = colnames(Admission)[-(1:2)], 
+    names_to = "Type", 
+    values_to = "Student_Number",
+    values_transform = list(num_nests = as.integer)
+  )
+```
+
+
+```{r}
+Admission <- Admission %>%
+  separate(col = Type, into = c("Type", "Gender", "Year"), sep = "\\_")
+```
+
+```{r}
+Admission <- Admission %>% 
+  pivot_wider(
+    names_from = Type, 
+    values_from = Student_Number
+  )
+```
+
+```{r}
+class(Admission$UNITID) = "character"
+Admission <- inner_join(University_type, Admission, by = c("UNITID"))
+```
+
+```{r}
+ggplot(Admission %>% filter(Gender == "T"), aes(x=Year,y=Admssn)) +
+  #geom_boxplot(outlier.shape = NA) +
+  geom_boxplot(aes(colour = University_type)) +
+  ggtitle("Admission numbers in different years according to university type") +
+  #ylim(0, 7500) +
+  labs(y="Admission Numbers", x="Year")
+```
+```{r}
+ggplot(Admission %>% filter(Gender == "T"), aes(x=Year,y=Applcn)) +
+  #geom_boxplot(outlier.shape = NA) +
+  geom_boxplot(aes(colour = University_type)) +
+  ggtitle("Application numbers in different years according to university type") +
+  #ylim(0, 7500) +
+  labs(y="Application Numbers", x="Year")
+```
+
+```{r}
+ggplot(Admission %>% filter(Gender == "T"), aes(x=University_type,y=Admssn/Applcn)) +
+  geom_boxplot(aes(colour = Year)) +
+  ggtitle("Admission rate in different years according to university type") +
+  labs(y="Admission rate", x="Year") +
+  scale_colour_brewer(palette = "Dark2")
+```
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Admission_year_type <- Admission %>%
+  filter(Gender == "T",) %>%
+  group_by(Year, University_type) %>%
+  summarise(Admssn_number = sum(Admssn))
+
+ggplot(Admission_year_type, aes(x = Year, y = Admssn_number, fill = University_type)) +
+  geom_col(position = "dodge")+
+  ggtitle("Total admission numbers in different years according to university type") +
+  labs(y="Admission Numbers", x="Year")
+```
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Application_year_type <- Admission %>%
+  filter(Gender == "T",) %>%
+  group_by(Year, University_type) %>%
+  summarise(Applcn_number = sum(Applcn))
+
+ggplot(Application_year_type, aes(x = Year, y = Applcn_number, fill = University_type)) +
+  geom_col(position = "dodge")+
+  ggtitle("Total application numbers in different years according to university type") +
+  labs(y="Application Numbers", x="Year")
+```
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Admission_rate_year_type <- Admission %>%
+  filter(Gender != "T",) %>%
+  group_by(Year, University_type, Gender) %>%
+  summarise(Admission_rate = sum(Admssn)/sum(Applcn))
+
+ggplot(Admission_rate_year_type, aes(x = Year, y = Admission_rate, fill = Gender)) +
+  geom_col(position = "dodge")+
+  facet_wrap(~University_type) +
+  ggtitle("Total admission rate in different years according to gender and university type") +
+  labs(y="Admission rate", x="Year")
+```
+
+```{r}
+SAT_score_math <- SAT_score %>%
+  group_by(Year) %>%
+  summarise(SAT_math = mean(SAT_MT))
+
+SAT_score_verble <- SAT_score %>%
+  group_by(Year) %>%
+  summarise(SAT_verble = mean(SAT_VR), n = n())
+
+SAT_score_avg <- inner_join(SAT_score_math, SAT_score_verble, by="Year") %>% 
+  pivot_longer(
+    cols = c(SAT_math, SAT_verble), 
+    names_to = "Subject", 
+    values_to = "Mean_score"
+  )
+
+ggplot(SAT_score_avg, aes(x = Year, y=Mean_score)) +
+  geom_line(aes(color = Subject)) +
+  scale_color_manual(values = c("darkred", "steelblue")) +
+  ggtitle("SAT mean scores in different years according to different subjects") +
+  labs(y="Mean score", x="Year")
+
+
+```
+
+
+
+
+
