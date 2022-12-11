@@ -15,7 +15,7 @@ library(gridExtra)
 library(ggplot2)
 library(ggpubr)
 #install.packages('choroplethr')
-library(choroplethr)
+library("choroplethr")
 library("openintro")
 
 #install.packages('choroplethrMaps')
@@ -400,3 +400,26 @@ Student_aid_2018_map
 Student_aid_2019_map
 Student_aid_2020_map
 Student_aid_2021_map
+
+
+
+
+
+video_game <- data.frame(read_csv("./video_games.csv"))
+
+
+video_game_ridge <- ggplot(video_game , aes(x = Metrics.Used.Price , y = as.factor(Release.Console), fill = factor(..quantile..))) + 
+  stat_density_ridges(quantiles = c(0.25,0.5,0.75),quantile_line = TRUE, geom="density_ridges_gradient") + 
+  xlab("Price($)") +
+  ylab("Comsole type") +
+  ggtitle("Plot of ridgeline density distribution of out state tuition 2017 -2021") +
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_viridis(discrete=TRUE
+                     , name = "Quantile"
+                     , alpha = 0.3
+                     , option = "cividis")
+video_game_ridge
+
+
+
