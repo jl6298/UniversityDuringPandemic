@@ -1,6 +1,8 @@
 ---
 title: "xindi_admission_dataset"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 date: "2022-11-25"
 ---
 
@@ -28,14 +30,16 @@ library('choroplethrMaps')
 
 # Import dataset
 
+## Import institution type
 ```{r}
-University_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
-University_type <- unique(University_type[c("UNITID","CONTROL")]) %>% rename(
-  "University_type" = "CONTROL"
+Institution_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
+Institution_type <- unique(Institution_type[c("UNITID","CONTROL")]) %>% rename(
+  "Institution_type" = "CONTROL"
 )
-
 ```
 
+
+## Import SAT score
 ```{r}
 Import_SAT <- function(filename, year) {
   df <- data.frame(read_csv(paste("./data_folder/CollegeScorecard_Raw_Data/", filename, sep=""), show_col_types = FALSE))
@@ -58,20 +62,19 @@ SAT2020 <- Import_SAT("MERGED2020_21_PP.csv", 2020)
 SAT2021 <- Import_SAT("Most-Recent-Cohorts-Institution.csv", 2021)
 
 SAT_score <- rbind(SAT2017, SAT2018, SAT2019, SAT2020, SAT2021)
+
+class(SAT_score$UNITID) = "character"
+SAT_score <- inner_join(Institution_type, SAT_score, by = c("UNITID"))
 ```
 
 
+## Import admission information
 ```{r}
 Admission <- data.frame(read_csv("./data_folder/Admission_Data/Admission_2017-2021.csv", show_col_types = FALSE))
 
-#print("Number of missing values")
-#colSums(is.na(Admission)) %>%
-#  sort(decreasing = TRUE)
-
 Admission <- subset(Admission, select = -c(...33) )
 Admission <- Admission %>% filter( rowSums(is.na(Admission)) == 0)
-```
-```{r}
+
 names(Admission) <- c("UNITID", "Institution_Name", "Applcn_T_2021", "Applcn_M_2021", "Applcn_W_2021", "Admssn_T_2021", "Admssn_M_2021", "Admssn_W_2021", "Applcn_T_2020", "Applcn_M_2020", "Applcn_W_2020", "Admssn_T_2020", "Admssn_M_2020", "Admssn_W_2020", "Applcn_T_2019", "Applcn_M_2019", "Applcn_W_2019", "Admssn_T_2019", "Admssn_M_2019", "Admssn_W_2019", "Applcn_T_2018", "Applcn_M_2018", "Applcn_W_2018", "Admssn_T_2018", "Admssn_M_2018", "Admssn_W_2018", "Applcn_T_2017", "Applcn_M_2017", "Applcn_W_2017", "Admssn_T_2017", "Admssn_M_2017", "Admssn_W_2017")
 
 Admission <- Admission %>% 
@@ -81,62 +84,115 @@ Admission <- Admission %>%
     values_to = "Student_Number",
     values_transform = list(num_nests = as.integer)
   )
-```
 
-
-```{r}
 Admission <- Admission %>%
   separate(col = Type, into = c("Type", "Gender", "Year"), sep = "\\_")
-```
 
-```{r}
 Admission <- Admission %>% 
   pivot_wider(
     names_from = Type, 
     values_from = Student_Number
   )
-```
 
-```{r}
 class(Admission$UNITID) = "character"
-Admission <- inner_join(University_type, Admission, by = c("UNITID"))
+Admission <- inner_join(Institution_type, Admission, by = c("UNITID"))
+
+```
+# Result relating to admission
+
+## Number of admission according to gender and institution type in 2017-2021
+```{r}
+
+Admission_Gender <- Admission %>% filter(Gender != "T")
+
+stack_bar_gender_population <- ggplot(Admission_Gender, aes(fill=Gender, y= Admssn, x=Year)) + 
+  geom_bar(position="stack", stat="identity") +
+  xlab("Year") +
+  ylab("Number of Enrolled Students") +
+  facet_grid(~Institution_type) +
+  ggtitle("Number of Admission Men and Women 2017-2021") 
+stack_bar_gender_population
 ```
 
+## Admission rate according to institution type in 2017-2021
+```{r}
+ggplot(Admission %>% filter(Gender == "T"), aes(x=Institution_type,y=Admssn/Applcn)) +
+  geom_boxplot(aes(colour = Year)) +
+  ggtitle("Admission rate in different years according to Institution type") +
+  labs(y="Admission rate", x="Year") +
+  scale_colour_brewer(palette = "Dark2")
+```
+
+## Admission rate according to gender and institution type in 2017-2021
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Admission_rate_year_type <- Admission %>%
+  filter(Gender != "T",) %>%
+  group_by(Year, Institution_type, Gender) %>%
+  summarise(Admission_rate = sum(Admssn)/sum(Applcn))
+
+ggplot(Admission_rate_year_type, aes(x = Year, y = Admission_rate, fill = Gender)) +
+  geom_col(position = "dodge")+
+  facet_wrap(~Institution_type) +
+  ggtitle("Admission rate in different years according to gender and Institution type") +
+  labs(y="Admission rate", x="Year")
+```
+
+## SAT mean scores according to subjects and institution type in 2017-2021
+```{r}
+SAT_score_math <- SAT_score %>%
+  group_by(Year, Institution_type) %>%
+  summarise(SAT_math = mean(SAT_MT))
+
+SAT_score_verble <- SAT_score %>%
+  group_by(Year, Institution_type) %>%
+  summarise(SAT_verble = mean(SAT_VR))
+
+SAT_score_avg <- inner_join(SAT_score_math, SAT_score_verble, by=c("Year", "Institution_type")) %>% 
+  pivot_longer(
+    cols = c(SAT_math, SAT_verble), 
+    names_to = "Subject", 
+    values_to = "Mean_score"
+  )
+
+ggplot(SAT_score_avg, aes(x = Year, y=Mean_score)) +
+  geom_line(aes(color = Institution_type)) +
+  facet_wrap(~Subject) +
+  ggtitle("SAT mean scores according to subjects and institution type in 2017-2021") +
+  labs(y="Mean score", x="Year")
+```
+
+
+## other plots
 ```{r}
 ggplot(Admission %>% filter(Gender == "T"), aes(x=Year,y=Admssn)) +
   #geom_boxplot(outlier.shape = NA) +
-  geom_boxplot(aes(colour = University_type)) +
-  ggtitle("Admission numbers in different years according to university type") +
+  geom_boxplot(aes(colour = Institution_type)) +
+  ggtitle("Admission numbers in different years according to Institution type") +
   #ylim(0, 7500) +
   labs(y="Admission Numbers", x="Year")
 ```
 ```{r}
 ggplot(Admission %>% filter(Gender == "T"), aes(x=Year,y=Applcn)) +
   #geom_boxplot(outlier.shape = NA) +
-  geom_boxplot(aes(colour = University_type)) +
-  ggtitle("Application numbers in different years according to university type") +
+  geom_boxplot(aes(colour = Institution_type)) +
+  ggtitle("Application numbers in different years according to Institution type") +
   #ylim(0, 7500) +
   labs(y="Application Numbers", x="Year")
 ```
 
-```{r}
-ggplot(Admission %>% filter(Gender == "T"), aes(x=University_type,y=Admssn/Applcn)) +
-  geom_boxplot(aes(colour = Year)) +
-  ggtitle("Admission rate in different years according to university type") +
-  labs(y="Admission rate", x="Year") +
-  scale_colour_brewer(palette = "Dark2")
-```
+
 
 ```{r}
 options(dplyr.summarise.inform = FALSE)
 Admission_year_type <- Admission %>%
   filter(Gender == "T",) %>%
-  group_by(Year, University_type) %>%
+  group_by(Year, Institution_type) %>%
   summarise(Admssn_number = sum(Admssn))
 
-ggplot(Admission_year_type, aes(x = Year, y = Admssn_number, fill = University_type)) +
+ggplot(Admission_year_type, aes(x = Year, y = Admssn_number, fill = Institution_type)) +
   geom_col(position = "dodge")+
-  ggtitle("Total admission numbers in different years according to university type") +
+  ggtitle("Total admission numbers in different years according to Institution type") +
   labs(y="Admission Numbers", x="Year")
 ```
 
@@ -144,27 +200,17 @@ ggplot(Admission_year_type, aes(x = Year, y = Admssn_number, fill = University_t
 options(dplyr.summarise.inform = FALSE)
 Application_year_type <- Admission %>%
   filter(Gender == "T",) %>%
-  group_by(Year, University_type) %>%
+  group_by(Year, Institution_type) %>%
   summarise(Applcn_number = sum(Applcn))
 
-ggplot(Application_year_type, aes(x = Year, y = Applcn_number, fill = University_type)) +
+ggplot(Application_year_type, aes(x = Year, y = Applcn_number, fill = Institution_type)) +
   geom_col(position = "dodge")+
-  ggtitle("Total application numbers in different years according to university type") +
+  ggtitle("Total application numbers in different years according to Institution type") +
   labs(y="Application Numbers", x="Year")
 ```
-```{r}
-options(dplyr.summarise.inform = FALSE)
-Admission_rate_year_type <- Admission %>%
-  filter(Gender != "T",) %>%
-  group_by(Year, University_type, Gender) %>%
-  summarise(Admission_rate = sum(Admssn)/sum(Applcn))
 
-ggplot(Admission_rate_year_type, aes(x = Year, y = Admission_rate, fill = Gender)) +
-  geom_col(position = "dodge")+
-  facet_wrap(~University_type) +
-  ggtitle("Total admission rate in different years according to gender and university type") +
-  labs(y="Admission rate", x="Year")
-```
+
+
 
 ```{r}
 SAT_score_math <- SAT_score %>%
@@ -190,7 +236,6 @@ ggplot(SAT_score_avg, aes(x = Year, y=Mean_score)) +
 
 
 ```
-
 
 
 
