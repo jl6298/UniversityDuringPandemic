@@ -106,97 +106,6 @@ For the institution type, we extracted the UNIT ID as a primary key to join the 
 For the SAT score, after importation, we totally have five files, and each one stores the SAT score for one year.  We first used NA to replace all NULL values and removed all rows with NA in each file. Then we use rbind() to bind five-year data into one data frame. Finally, we use inner_join() to join the SAT score and UNIT ID.
 For the admission information, we first removed one column with all NA values and then removed all rows with NA.  Each observation has three features, type (application number or admission number), gender (total or woman or man), and year (2017-2021). Therefore, we first applied pivot_longer() to generate a 3-column data frame and then applied pivot_wider() to generate a 5-column data frame to take each feature as a separate column.
 
-We processed cost efficiency related data in the “data_earning&tuition.R”.
-```{r, echo = TRUE}
-## import and transform Tuition
-out_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_out_state.csv", header = TRUE)
-in_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
-total_fee_in_state <- in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
-total_fee_out_state <- out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
-per_year_fee_df <- fee_df %>% pivot_longer(cols=c('X2021', 'X2020', 'X2019', 'X2018', 'X2017'), # the columns(feature names) to be pivoted
-                                           names_to='year', # the name of the column of features
-                                           values_to='tuition') # the name of the column of values
-per_year_fee_out_state_df = per_year_fee_df[per_year_fee_df$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
-per_year_fee_in_state_df = per_year_fee_df[per_year_fee_df$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
-out_state_2021 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2021", ]
-out_state_2020 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2020", ]
-out_state_2019 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2019", ]
-out_state_2018 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2018", ]
-out_state_2017 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2017", ]
-
-per_year_fee_df <- per_year_fee_df %>% 
-  rename("tuition_type" = "Type.of.cost...residency..and.student.housing")
-instate_2021_top50 = per_year_fee_df[per_year_fee_df$year == 'X2021' &  per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-outstate_2021_top50 = per_year_fee_df[per_year_fee_df$year == 'X2021' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-instate_2020_top50 = per_year_fee_df[per_year_fee_df$year == 'X2020' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-outstate_2020_top50 = per_year_fee_df[per_year_fee_df$year == 'X2020' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-instate_2019_top50 = per_year_fee_df[per_year_fee_df$year == 'X2019' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-outstate_2019_top50 = per_year_fee_df[per_year_fee_df$year == 'X2019' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-instate_2018_top50 = per_year_fee_df[per_year_fee_df$year == 'X2018' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-outstate_2018_top50 = per_year_fee_df[per_year_fee_df$year == 'X2018' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-instate_2017_top50 = per_year_fee_df[per_year_fee_df$year == 'X2017' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-outstate_2017_top50 = per_year_fee_df[per_year_fee_df$year == 'X2017' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
-per_year_fee_df_50_instate = rbind(rbind(rbind(rbind(instate_2021_top50,instate_2020_top50), instate_2019_top50), instate_2018_top50), instate_2017_top50) %>% drop_na(tuition)
-per_year_fee_df_50_outstate = rbind(rbind(rbind(rbind(outstate_2021_top50,outstate_2020_top50), outstate_2019_top50), outstate_2018_top50), outstate_2017_top50)%>% drop_na(tuition)
-per_year_fee_df_50_instate$Institution.name <- iconv(per_year_fee_df_50_instate$Institution.name, "ASCII", "UTF-8", sub="")
-per_year_fee_df_50_outstate$Institution.name <- iconv(per_year_fee_df_50_outstate$Institution.name, "ASCII", "UTF-8", sub="")
-
-mean_tuition_df <- data.frame(
-  tuition_mean = c(mean(instate_2021_top50$tuition), mean(instate_2020_top50$tuition), mean(instate_2019_top50$tuition), mean(instate_2018_top50$tuition),
-                   mean(instate_2017_top50$tuition), mean(outstate_2021_top50$tuition), mean(outstate_2020_top50$tuition), mean(outstate_2019_top50$tuition), 
-                   mean(outstate_2018_top50$tuition), mean(outstate_2017_top50$tuition)), 
-  year = c(2021,2020,2019,2018,2017,2021,2020,2019,2018,2017),
-  tuition_type = c('instate','instate','instate','instate','instate','outstate','outstate','outstate','outstate','outstate'), 
-  stringsAsFactors = FALSE
-) %>% drop_na(tuition_mean, year, tuition_type)
-
-## import and transform QS ranking
-
-QS_ranking_2021 <- read.csv("./resources/data_folder/data_Jincheng/QS_ranking_2021.csv", header = TRUE)
-top_25_2021 <- head(QS_ranking_2021, 25)
-top_25_2021$Rank <- as.numeric(top_25_2021$Rank)
-top_25_2021
-df_rank_out_state <-  left_join(top_25_2021, out_state_2021, 
-                                by=c('University_id' = 'Unit.Id'))
-df_rank_out_state
-
-## import and transform earning data
-
-student_earning <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
-earning_df <- read.csv("./resources/data_folder/data_Jincheng/Most-Recent-Cohorts-Institution-earning.csv", header = TRUE)%>% subset( select = c(UNITID,INSTNM, MN_EARN_WNE_P10))
-earning_df_dropna <- earning_df %>% subset(MN_EARN_WNE_P10 != 'NULL')
-print(earning_df_dropna)
-earning_df_dropna <- earning_df_dropna %>% drop_na(MN_EARN_WNE_P10)
-earning_df_dropna$MN_EARN_WNE_P10 <- as.numeric(earning_df_dropna$MN_EARN_WNE_P10)
-earning_df_dropna_tail <- tail(earning_df_dropna[order(earning_df_dropna$MN_EARN_WNE_P10),], 100)
-df_rank_earning_out_state <- left_join(df_rank_out_state, earning_df_dropna, 
-                                       by=c('University_id' = 'UNITID')) %>% mutate(institution_earning_vs_tuition = MN_EARN_WNE_P10/tuition)
-df_rank_earning_out_state
-#out_state_tuition 
-#in_state_tuition
-out_state_ts = out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
-in_state_ts = in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
-#names(out_state_ts)[names(out_state_ts) == 'On-campus out-of-state'] <- 'out_of_state_tuition'
-#names(in_state_ts)[names(in_state_ts) == 'On-campus in-state'] <- 'in_state_tuition'
-earning_vs_out_state <- left_join(earning_df_dropna_tail, out_state_ts, 
-                                  by=c('UNITID'='Unit.Id'))
-earning_vs_in_state <- left_join(earning_df_dropna_tail, in_state_ts, 
-                                 by=c('UNITID'='Unit.Id'))
-earning_vs_out_state <- earning_vs_out_state  %>% drop_na(X2021)
-earning_vs_out_state <- earning_vs_out_state[order(earning_vs_out_state$MN_EARN_WNE_P10),]
-earning_vs_out_state$INSTNM <- factor(earning_vs_out_state$INSTNM)
-earning_vs_out_state$INSTNM <- fct_reorder(earning_vs_out_state$INSTNM, earning_vs_out_state$MN_EARN_WNE_P10, .desc = FALSE)
-
-earning_vs_in_state <- earning_vs_in_state  %>% drop_na(X2021)
-earning_vs_in_state <- earning_vs_in_state[order(earning_vs_in_state$MN_EARN_WNE_P10),]
-
-earning_vs_in_state$INSTNM <- factor(earning_vs_in_state$INSTNM)
-earning_vs_in_state$INSTNM <- fct_reorder(earning_vs_in_state$INSTNM, earning_vs_in_state$MN_EARN_WNE_P10, .desc = FALSE)
-earning_vs_in_state
-```
-For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
-For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
-For tuition vs earning data, we first removed the row with NA in both the tuition column and the mean earning column, then we joined two the tuition data set and the  Most-Recent-Cohorts-Institution.csv
 
 We process Student aid related data in the “Data_Student_Aid.R”
 ```{r, echo = False}
@@ -373,6 +282,98 @@ Grant_Map_2019_2021 <-ggplot(Student_aid_avg_state_2019_2021_Map,aes(x=long, y=l
 ```
 For university location, we use UNIT ID as primary key and find all unique combinations of UNIT ID and state.
 For student aid, after importation,  we first rename columns to more descriptive names. We categorize the type of Institutional grant data into “Percent” (percent of students in a school receiving school aid) and average amount (average amount of aid received by students in a school.) We observe year entries, 2017 to 2021, are column titles. We use pivot longer to put year entries into a single column to clean the data.
+
+We processed cost efficiency related data in the “data_earning&tuition.R”.
+```{r, echo = TRUE}
+## import and transform Tuition
+out_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_out_state.csv", header = TRUE)
+in_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
+total_fee_in_state <- in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
+total_fee_out_state <- out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
+per_year_fee_df <- fee_df %>% pivot_longer(cols=c('X2021', 'X2020', 'X2019', 'X2018', 'X2017'), # the columns(feature names) to be pivoted
+                                           names_to='year', # the name of the column of features
+                                           values_to='tuition') # the name of the column of values
+per_year_fee_out_state_df = per_year_fee_df[per_year_fee_df$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
+per_year_fee_in_state_df = per_year_fee_df[per_year_fee_df$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
+out_state_2021 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2021", ]
+out_state_2020 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2020", ]
+out_state_2019 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2019", ]
+out_state_2018 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2018", ]
+out_state_2017 <- per_year_fee_out_state_df[per_year_fee_out_state_df$year == "X2017", ]
+
+per_year_fee_df <- per_year_fee_df %>% 
+  rename("tuition_type" = "Type.of.cost...residency..and.student.housing")
+instate_2021_top50 = per_year_fee_df[per_year_fee_df$year == 'X2021' &  per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+outstate_2021_top50 = per_year_fee_df[per_year_fee_df$year == 'X2021' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+instate_2020_top50 = per_year_fee_df[per_year_fee_df$year == 'X2020' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+outstate_2020_top50 = per_year_fee_df[per_year_fee_df$year == 'X2020' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+instate_2019_top50 = per_year_fee_df[per_year_fee_df$year == 'X2019' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+outstate_2019_top50 = per_year_fee_df[per_year_fee_df$year == 'X2019' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+instate_2018_top50 = per_year_fee_df[per_year_fee_df$year == 'X2018' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+outstate_2018_top50 = per_year_fee_df[per_year_fee_df$year == 'X2018' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+instate_2017_top50 = per_year_fee_df[per_year_fee_df$year == 'X2017' & per_year_fee_df$tuition_type == 'On-campus in-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+outstate_2017_top50 = per_year_fee_df[per_year_fee_df$year == 'X2017' & per_year_fee_df$tuition_type == 'On-campus out-of-state', ] %>% arrange(desc(tuition)) %>% head(2500)
+per_year_fee_df_50_instate = rbind(rbind(rbind(rbind(instate_2021_top50,instate_2020_top50), instate_2019_top50), instate_2018_top50), instate_2017_top50) %>% drop_na(tuition)
+per_year_fee_df_50_outstate = rbind(rbind(rbind(rbind(outstate_2021_top50,outstate_2020_top50), outstate_2019_top50), outstate_2018_top50), outstate_2017_top50)%>% drop_na(tuition)
+per_year_fee_df_50_instate$Institution.name <- iconv(per_year_fee_df_50_instate$Institution.name, "ASCII", "UTF-8", sub="")
+per_year_fee_df_50_outstate$Institution.name <- iconv(per_year_fee_df_50_outstate$Institution.name, "ASCII", "UTF-8", sub="")
+
+mean_tuition_df <- data.frame(
+  tuition_mean = c(mean(instate_2021_top50$tuition), mean(instate_2020_top50$tuition), mean(instate_2019_top50$tuition), mean(instate_2018_top50$tuition),
+                   mean(instate_2017_top50$tuition), mean(outstate_2021_top50$tuition), mean(outstate_2020_top50$tuition), mean(outstate_2019_top50$tuition), 
+                   mean(outstate_2018_top50$tuition), mean(outstate_2017_top50$tuition)), 
+  year = c(2021,2020,2019,2018,2017,2021,2020,2019,2018,2017),
+  tuition_type = c('instate','instate','instate','instate','instate','outstate','outstate','outstate','outstate','outstate'), 
+  stringsAsFactors = FALSE
+) %>% drop_na(tuition_mean, year, tuition_type)
+
+## import and transform QS ranking
+
+QS_ranking_2021 <- read.csv("./resources/data_folder/data_Jincheng/QS_ranking_2021.csv", header = TRUE)
+top_25_2021 <- head(QS_ranking_2021, 25)
+top_25_2021$Rank <- as.numeric(top_25_2021$Rank)
+top_25_2021
+df_rank_out_state <-  left_join(top_25_2021, out_state_2021, 
+                                by=c('University_id' = 'Unit.Id'))
+df_rank_out_state
+
+## import and transform earning data
+
+student_earning <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
+earning_df <- read.csv("./resources/data_folder/data_Jincheng/Most-Recent-Cohorts-Institution-earning.csv", header = TRUE)%>% subset( select = c(UNITID,INSTNM, MN_EARN_WNE_P10))
+earning_df_dropna <- earning_df %>% subset(MN_EARN_WNE_P10 != 'NULL')
+print(earning_df_dropna)
+earning_df_dropna <- earning_df_dropna %>% drop_na(MN_EARN_WNE_P10)
+earning_df_dropna$MN_EARN_WNE_P10 <- as.numeric(earning_df_dropna$MN_EARN_WNE_P10)
+earning_df_dropna_tail <- tail(earning_df_dropna[order(earning_df_dropna$MN_EARN_WNE_P10),], 100)
+df_rank_earning_out_state <- left_join(df_rank_out_state, earning_df_dropna, 
+                                       by=c('University_id' = 'UNITID')) %>% mutate(institution_earning_vs_tuition = MN_EARN_WNE_P10/tuition)
+df_rank_earning_out_state
+#out_state_tuition 
+#in_state_tuition
+out_state_ts = out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
+in_state_ts = in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
+#names(out_state_ts)[names(out_state_ts) == 'On-campus out-of-state'] <- 'out_of_state_tuition'
+#names(in_state_ts)[names(in_state_ts) == 'On-campus in-state'] <- 'in_state_tuition'
+earning_vs_out_state <- left_join(earning_df_dropna_tail, out_state_ts, 
+                                  by=c('UNITID'='Unit.Id'))
+earning_vs_in_state <- left_join(earning_df_dropna_tail, in_state_ts, 
+                                 by=c('UNITID'='Unit.Id'))
+earning_vs_out_state <- earning_vs_out_state  %>% drop_na(X2021)
+earning_vs_out_state <- earning_vs_out_state[order(earning_vs_out_state$MN_EARN_WNE_P10),]
+earning_vs_out_state$INSTNM <- factor(earning_vs_out_state$INSTNM)
+earning_vs_out_state$INSTNM <- fct_reorder(earning_vs_out_state$INSTNM, earning_vs_out_state$MN_EARN_WNE_P10, .desc = FALSE)
+
+earning_vs_in_state <- earning_vs_in_state  %>% drop_na(X2021)
+earning_vs_in_state <- earning_vs_in_state[order(earning_vs_in_state$MN_EARN_WNE_P10),]
+
+earning_vs_in_state$INSTNM <- factor(earning_vs_in_state$INSTNM)
+earning_vs_in_state$INSTNM <- fct_reorder(earning_vs_in_state$INSTNM, earning_vs_in_state$MN_EARN_WNE_P10, .desc = FALSE)
+earning_vs_in_state
+```
+For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
+For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
+For tuition vs earning data, we first removed the row with NA in both the tuition column and the mean earning column, then we joined two the tuition data set and the  Most-Recent-Cohorts-Institution.csv
 
 We process Diversity related data in the “Data_Diversity.R”. 
 ```{r, echo = FALSE}
