@@ -1,8 +1,832 @@
 # Data 
 
 ## Sources
+Our team sourced the data from the “National Center for Education Statistics”(NCES) maintained by the U.S. Institution of Education Science (IES) . 
+The data link is :https://nces.ed.gov/ipeds/summarytables
+
+The data set is dedicated to promote education transparency such that Students and their families are well informed of the cost and benefits of different higher education institutions and therefore are enabled to make better educational decisions.
+
+The data collected from each institutions each year in the data set are all numeric entry. The data related to percentage are collected as float between 0 and 100. However, data regarding qualitative information of each school, such as location (state), institution type(private, public), school names, etc are provided as character, which enables our use of them as categorical variable. 
+
+The team assumed good data availability due to the fact that the data is collected by government fund agency. However, in the process of cleaning visualizing data, the team observe substantial amount of incomplete record included in the data set. The size of data frame shrunk significantly after the "na" values are dropped. Though the team observes meaningful pattern from remaining data, and the patterns observes in available should not loss generality due to central limit theorem, the story behind incomplete data is worth exploring.  
+
+Initially, the team planned to treat student earning as a crucial part of analysis. Nothing reflects education benefit better than student earning for most middle-class and lower-class people who seek social mobility from education. However, the earning data is not available from IPEDS. The team founds earning data from College score card (https://collegescorecard.ed.gov/), a database maintained by U.S. Department of Education who also uses IPEDS data to help college applicants visualize cost and gain of different institutions. However, only one year earning data is available, many of which are also "na". The lack of available data compels team to explore other data patterns and analyze evolution of US education statics over the pandemics without focuing on cost-benefit analysis, which was the team's original intention. 
+
+
+
 
 ## Cleaning / transformation
 
+We processed admission related data in the “data_admission.R”.
+```{r, echo = TRUE}
+source("data_admission.R", local = knitr::knit_global())
+```
+For the institution type, we extracted the UNIT ID as a primary key to join the institution type with other data frames. We have three types of institutions, public, private nonprofit, and private for-profit.
+For the SAT score, after importation, we totally have five files, and each one stores the SAT score for one year.  We first used NA to replace all NULL values and removed all rows with NA in each file. Then we use rbind() to bind five-year data into one data frame. Finally, we use inner_join() to join the SAT score and UNIT ID.
+For the admission information, we first removed one column with all NA values and then removed all rows with NA.  Each observation has three features, type (application number or admission number), gender (total or woman or man), and year (2017-2021). Therefore, we first applied pivot_longer() to generate a 3-column data frame and then applied pivot_wider() to generate a 5-column data frame to take each feature as a separate column.
+
+We processed cost efficiency related data in the “data_earning&tuition.R”.
+```{r, echo = TRUE}
+source("data_earning&tuition.R", local = knitr::knit_global())
+```
+For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
+For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
+For tuition vs earning data, we first removed the row with NA in both the tuition column and the mean earning column, then we joined two the tuition data set and the  Most-Recent-Cohorts-Institution.csv
+
+We process Student aid related data in the “Data_Student_Aid.R”
+```{r, echo = False}
+
+library('cowplot')
+library("choroplethr")
+library("dplyr")
+library("forcats")
+library("gridExtra")
+library("ggplot2")
+library("ggpubr")
+library("ggridges")
+library("ggmap")
+library("openintro")
+#remotes::install_github("jtr13/redav")
+library("redav")
+library("readr")
+library("readxl")
+library("tidyr")
+library("tidyverse")
+library("viridis")
+library("HH")
+library("jsonlite")
+library("colorspace")
+
+University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
+
+Student_aid<- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Student_Aid/Student_Aid_2017-2021.xlsx"))
+Student_aid <- Student_aid %>% rename(
+  "UNITID" = "Unit.Id",
+  "Aid_type" = "...3",
+  "Data_representation" = "...4",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+Student_aid$UNITID <- as.character(Student_aid$UNITID)
+Student_aid_inst <- Student_aid[Student_aid$Aid_type == "Institutional grants", ]
+Student_aid_inst_grant_percent <- Student_aid_inst[Student_aid_inst$Data_representation == "Percent", ]
+Student_aid_inst_grant_Amount <- Student_aid_inst[Student_aid_inst$Data_representation == "Average amount", ]
+
+Student_aid_inst_grant_percent <- Student_aid_inst_grant_percent %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(year = as.integer),
+    values_to = "Percent",
+    values_transform = list(num_nests = as.integer)
+  )
+University_info$UNITID <- as.character(University_info$UNITID)
+Student_aid_inst_grant_percent <- inner_join(Student_aid_inst_grant_percent, University_info , by = c("UNITID"))
+Student_aid_inst_grant_percent$Percent <- as.numeric(Student_aid_inst_grant_percent$Percent)
+Student_aid_inst_grant_percent <- Student_aid_inst_grant_percent %>%
+  mutate(Percent_grant = case_when(
+    Student_aid_inst_grant_percent$Percent >= 0 & Student_aid_inst_grant_percent$Percent < 0.25 ~ "0% ~ 25%",
+    Student_aid_inst_grant_percent$Percent >= 0.25 & Student_aid_inst_grant_percent$Percent < 0.5 ~ "25% ~ 50%",
+    Student_aid_inst_grant_percent$Percent >= 0.5 & Student_aid_inst_grant_percent$Percent < 0.75 ~ "50% ~ 75%",
+    Student_aid_inst_grant_percent$Percent >= 0.75 & Student_aid_inst_grant_percent$Percent <= 100 ~ "75% ~ 100%"
+  ))
+
+
+Student_aid_inst_grant_Amount <- Student_aid_inst_grant_Amount %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(year = as.integer),
+    values_to = "Amount",
+    values_transform = list(num_nests = as.integer)
+  )
+
+Student_aid_inst_grant_Amount <- inner_join(Student_aid_inst_grant_Amount, University_info , by = c("UNITID"))
+Student_aid_inst_grant_na <- Student_aid_inst_grant_Amount[Student_aid_inst_grant_Amount$Amount == "-", ]
+Student_aid_inst_grant_Amount <- Student_aid_inst_grant_Amount[Student_aid_inst_grant_Amount$Amount != "-", ]
+Student_aid_inst_grant_Amount$Amount <-as.numeric(Student_aid_inst_grant_Amount$Amount)
+
+
+inst_grant_percent_count <- 
+  Student_aid_inst_grant_percent %>% count(Year, Institution_type, Percent_grant)
+inst_grant_percent_count$Percent_grant <- inst_grant_percent_count$Percent_grant %>% replace_na("Not provided")
+
+inst_grant_percent_count_2017 <- inst_grant_percent_count[inst_grant_percent_count$Year == 2017, ]
+bar_inst_grant_percentile_2017 <- 
+  ggplot(inst_grant_percent_count_2017,  aes(x = Percent_grant, y = n)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Institution_type) +
+  labs(x = "Percent Grant", y = "Number of institution", 
+       title = "Barplot of percent grant to Institutions in 2017") +
+  theme(axis.text.x = element_text(angle = -90), plot.title = element_text(hjust = 0.5),
+        text=element_text(size=5)) +
+  ylim(0, 1000)
+
+inst_grant_percent_count_2018 <- inst_grant_percent_count[inst_grant_percent_count$Year == 2018, ]
+bar_inst_grant_percentile_2018 <- 
+  ggplot(inst_grant_percent_count_2018,  aes(x = Percent_grant, y = n)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Institution_type) +
+  labs(x = "Percent Grant", y = "Number of institution", 
+       title = "Barplot of percent grant to Institutions in 2018") +
+  theme(axis.text.x = element_text(angle = -90), plot.title = element_text(hjust = 0.5),
+        text=element_text(size=5)) +
+  ylim(0, 1000)
+
+inst_grant_percent_count_2019 <- inst_grant_percent_count[inst_grant_percent_count$Year == 2019, ]
+bar_inst_grant_percentile_2019 <- 
+  ggplot(inst_grant_percent_count_2019,  aes(x = Percent_grant, y = n)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Institution_type) +
+  labs(x = "Percent Grant", y = "Number of institution", 
+       title = "Barplot of percent grant to Institutions in 2018") +
+  theme(axis.text.x = element_text(angle = -90), plot.title = element_text(hjust = 0.5),
+        text=element_text(size=5)) +
+  ylim(0, 1000)
+
+inst_grant_percent_count_2020 <- inst_grant_percent_count[inst_grant_percent_count$Year == 2020, ]
+bar_inst_grant_percentile_2020 <- 
+  ggplot(inst_grant_percent_count_2020,  aes(x = Percent_grant, y = n)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Institution_type) +
+  labs(x = "Percent Grant", y = "Number of institution", 
+       title = "Barplot of percent grant to Institutions in 2020") +
+  theme(axis.text.x = element_text(angle = -90), plot.title = element_text(hjust = 0.5),
+        text=element_text(size=5)) +
+  ylim(0, 1000)
+
+inst_grant_percent_count_2021 <- inst_grant_percent_count[inst_grant_percent_count$Year == 2021, ]
+bar_inst_grant_percentile_2021 <- 
+  ggplot(inst_grant_percent_count_2021,  aes(x = Percent_grant, y = n)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Institution_type) +
+  labs(x = "Percent Grant", y = "Number of institution", 
+       title = "Barplot of percent grant to Institutions in 2021") +
+  theme(axis.text.x = element_text(angle = -90), plot.title = element_text(hjust = 0.5),
+        text=element_text(size=5)) +
+  ylim(0, 1000)
+
+total_plot_percent_grant <- ggarrange(bar_inst_grant_percentile_2017,
+                                      bar_inst_grant_percentile_2018,
+                                      bar_inst_grant_percentile_2019,
+                                      bar_inst_grant_percentile_2020,
+                                      bar_inst_grant_percentile_2021,
+                                      nrow = 2, ncol = 3)
+
+
+Student_aid_avg_state <- Student_aid_inst_grant_Amount[, c("Year", "State", "Amount")] %>%
+  group_by(as.factor(Year), as.factor(State)) %>%
+  summarise_at(vars(Amount), list (name = mean))
+
+Student_aid_avg_state  <- Student_aid_avg_state   %>% rename(
+  "Year" = "as.factor(Year)",
+  "region" = "as.factor(State)",
+  "value" = "name")
+Student_aid_avg_state$region <- tolower(abbr2state(Student_aid_avg_state$region))
+
+Student_aid_avg_state <- Student_aid_avg_state                           
+
+Student_aid_avg_state_2017_2019 <- Student_aid_avg_state[Student_aid_avg_state$Year == 2017|Student_aid_avg_state$Year == 2019,  ]
+
+Student_aid_avg_state_2019_2021 <- Student_aid_avg_state[Student_aid_avg_state$Year == 2019|Student_aid_avg_state$Year == 2021,  ]
+
+Student_aid_avg_state_2017_2019 <- Student_aid_avg_state_2017_2019 %>%
+  pivot_wider(names_from = Year, 
+              values_from = value, 
+              values_fill = 0)
+Student_aid_avg_state_2017_2019 <- Student_aid_avg_state_2017_2019 %>%
+  mutate(Amount_Change_USD = Student_aid_avg_state_2017_2019$`2019` - Student_aid_avg_state_2017_2019$`2017`)
+
+Student_aid_avg_state_2019_2021 <- Student_aid_avg_state_2019_2021 %>%
+  pivot_wider(names_from = Year, 
+              values_from = value, 
+              values_fill = 0)
+Student_aid_avg_state_2019_2021 <- Student_aid_avg_state_2019_2021 %>%
+  mutate(Amount_Change_USD = Student_aid_avg_state_2019_2021$`2021` - Student_aid_avg_state_2017_2019$`2019`)
+
+
+statesMap <- map_data("state")
+
+Student_aid_avg_state_2017_2019_Map <- merge(statesMap, Student_aid_avg_state_2017_2019, by = "region")
+
+Grant_Map_2017_2019 <- ggplot(Student_aid_avg_state_2017_2019_Map,aes(x=long, y=lat, group=group,fill=Amount_Change_USD))+
+  geom_polygon(color="black")+
+  scale_fill_continuous_divergingx(palette = 'RdBu', mid = 0) +
+  ggtitle("Change of Insti grant 2017-2019")
+
+Student_aid_avg_state_2019_2021_Map <- merge(statesMap, Student_aid_avg_state_2019_2021, by = "region")
+
+Grant_Map_2019_2021 <-ggplot(Student_aid_avg_state_2019_2021_Map,aes(x=long, y=lat, group=group,fill=Amount_Change_USD))+
+  geom_polygon(color="black")+
+  scale_fill_continuous_divergingx(palette = 'RdBu', mid = 0) +
+  ggtitle("Change of Insti grant 2019-2021")
+
+
+
+
+```
+For university location, we use UNIT ID as primary key and find all unique combinations of UNIT ID and state.
+For student aid, after importation,  we first rename columns to more descriptive names. We categorize the type of Institutional grant data into “Percent” (percent of students in a school receiving school aid) and average amount (average amount of aid received by students in a school.) We observe year entries, 2017 to 2021, are column titles. We use pivot longer to put year entries into a single column to clean the data.
+
+We process Diversity related data in the “Data_Diversity.R”. 
+```{r, echo = FALSE}
+library('cowplot')
+library("choroplethr")
+library("dplyr")
+library("forcats")
+library("gridExtra")
+library("ggplot2")
+library("ggpubr")
+library("ggridges")
+library("openintro")
+#remotes::install_github("jtr13/redav")
+library("redav")
+library("readr")
+library("readxl")
+library("tidyr")
+library("tidyverse")
+library("viridis")
+library("HH")
+library("jsonlite")
+
+University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
+
+Enrollment_Race_Data <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
+
+Enrollment_Gender_Data <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
+
+Enrollment_Race_Data <- Enrollment_Race_Data %>% rename(
+  "UNITID" = "Unit.Id",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+
+Enrollment_Race_Data <- Enrollment_Race_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "Enrollment Amount",
+    values_transform = list(num_nests = as.integer)
+  )
+Enrollment_Race_Data <- Enrollment_Race_Data[Enrollment_Race_Data$Gender == "Total",]
+Enrollment_Race_Data <- subset(Enrollment_Race_Data, select = -c(Level.of.student))
+Enrollment_Race_Data$`Enrollment Amount` <- as.numeric(Enrollment_Race_Data$`Enrollment Amount`)
+Enrollment_Race_Data <- drop_na(Enrollment_Race_Data)
+
+
+Enrollment_Race_Data <- Enrollment_Race_Data %>%
+  pivot_wider(names_from = Race.ethnicity, 
+              values_from = `Enrollment Amount`, 
+              values_fill = 0)
+
+Enrollment_Race_Data$UNITID <- as.character(Enrollment_Race_Data$UNITID)
+Enrollment_Race_Data <- inner_join(University_loc, Enrollment_Race_Data, by = c("UNITID"))
+
+Enrollment_Race_Data <- data.frame(Enrollment_Race_Data)
+diversity_idx = function(x, output){
+  
+  # accessing elements from first column
+  
+  vec <- as.vector(as.numeric(x[7:15]))
+  
+  total <- as.numeric(x[6])
+  toReturn <- 0;
+  
+  for (values in vec) {
+    
+    if(values != 0){
+      prob <- values / total
+      
+      toReturn <- toReturn + prob * (1 - prob)
+    }
+  }
+  
+  return (toReturn)
+}
+
+
+vec <- base::apply(X = Enrollment_Race_Data, MARGIN = 1, FUN = diversity_idx)
+Enrollment_Race_Data <- cbind(Enrollment_Race_Data,diversity_index = vec)
+
+Enrollment_Race_Data <- Enrollment_Race_Data %>%
+  mutate(Diversity_rating = case_when(
+    Enrollment_Race_Data$diversity_index >= 0.5 ~"High Diversity", 
+    Enrollment_Race_Data$diversity_index < 0.5 ~"Low Diversity", 
+    
+  ))
+Diversity_Data_aggregated <-Enrollment_Race_Data %>% group_by(Year, STABBR, Diversity_rating)  %>%
+  summarise(Diversity_count = n())
+
+Diversity_Data_aggregated <- Diversity_Data_aggregated %>%
+  pivot_wider(names_from = Diversity_rating, 
+              values_from = Diversity_count, 
+              values_fill = 0)
+
+diversity_percentage= function(x, output){
+  
+  # accessing elements from first column
+  
+  High_count <- as.numeric(x[3])
+  Low_count <- as.numeric(x[4])
+  
+  
+  return (High_count / (High_count + Low_count))
+}
+High_Div_percentage <- base::apply(X = Diversity_Data_aggregated, MARGIN = 1, FUN = diversity_percentage)
+Diversity_Data_aggregated <- cbind(Diversity_Data_aggregated,High_Diversity_Percentage = High_Div_percentage)
+
+Diversity_Data_aggregated$High_Diversity_Percentage <- as.numeric(Diversity_Data_aggregated$High_Diversity_Percentage)*100
+
+Diversity_Data_aggregated <- Diversity_Data_aggregated %>%
+  mutate( Diversity_Bin = dplyr::case_when(
+    High_Diversity_Percentage >= 0 & High_Diversity_Percentage < 25 ~ "0% ~ 25%",
+    High_Diversity_Percentage  >= 25 & High_Diversity_Percentage  < 50 ~ "25% ~ 50%",
+    High_Diversity_Percentage  >= 50 & High_Diversity_Percentage < 75 ~ "50% ~ 75%",
+    High_Diversity_Percentage >= 75.0 & High_Diversity_Percentage <= 100.0 ~ "75% ~ 100%"
+  ))
+
+Diversity_Data_aggregated$STABBR <- tolower(abbr2state(Diversity_Data_aggregated$STABBR))
+Diversity_Data_aggregated  <- Diversity_Data_aggregated  %>% rename(
+  "region" = "STABBR",
+  "value" = "Diversity_Bin")
+
+category <- cut(Diversity_Data_aggregated$High_Diversity_Percentage, 
+                breaks = c(0,25,50,75, 100),
+                labels = c("[, 25)",
+                           "[25, 50)",
+                           "[50, 75)",
+                           "[75, 100)"
+                ))
+
+Diversity_Data_aggregated$Diversity_Bin <- category
+Diversity_Data_aggregated_2017 <- 
+  Diversity_Data_aggregated[Diversity_Data_aggregated$Year == 2017, c("region", "value")]
+
+Diversity_Data_aggregated_2018 <- 
+  Diversity_Data_aggregated[Diversity_Data_aggregated$Year == 2018, c("region", "value")]
+
+Diversity_Data_aggregated_2019 <- 
+  Diversity_Data_aggregated[Diversity_Data_aggregated$Year == 2019, c("region", "value")]
+
+Diversity_Data_aggregated_2020 <- 
+  Diversity_Data_aggregated[Diversity_Data_aggregated$Year == 2020, c("region", "value")]
+
+Diversity_Data_aggregated_2021 <- 
+  Diversity_Data_aggregated[Diversity_Data_aggregated$Year == 2021, c("region", "value")]
+
+High_Diversity_Percentage_2017_map <- state_choropleth(Diversity_Data_aggregated_2017,
+                                                       title = "High_Div Uni Pct 2017",
+                                                       legend = "Percentage") 
+layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2017_map $layers, function(x) class(x$geom)[1]))
+High_Diversity_Percentage_2017_map $layers[[layer_no]] <- NULL
+
+High_Diversity_Percentage_2018_map <- state_choropleth(Diversity_Data_aggregated_2018,
+                                                       title = "High_Div Uni Pct 2018",
+                                                       legend = "Percentage") 
+layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2018_map $layers, function(x) class(x$geom)[1]))
+High_Diversity_Percentage_2018_map $layers[[layer_no]] <- NULL
+
+High_Diversity_Percentage_2019_map <- state_choropleth(Diversity_Data_aggregated_2019,
+                                                       title = "High_Div Uni Pct 2019") 
+layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2019_map $layers, function(x) class(x$geom)[1]))
+High_Diversity_Percentage_2019_map $layers[[layer_no]] <- NULL
+
+High_Diversity_Percentage_2020_map <- state_choropleth(Diversity_Data_aggregated_2020,
+                                                       title = "High_Div Uni Pct 2020") 
+layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2020_map $layers, function(x) class(x$geom)[1]))
+High_Diversity_Percentage_2020_map $layers[[layer_no]] <- NULL
+
+High_Diversity_Percentage_2021_map <- state_choropleth(Diversity_Data_aggregated_2021,
+                                                       title = "High_Div Uni Pct 2021") 
+layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2021_map $layers, function(x) class(x$geom)[1]))
+High_Diversity_Percentage_2021_map $layers[[layer_no]] <- NULL
+
+# This is the code we use to generate diversity histogram in interactive 
+# component. We leave it here for your reference.
+
+#Enrollment_Race_Data_2021 <- Enrollment_Race_Data[, c('UNITID', #'STABBR',"Year", "Institution.name", 'diversity_index')]
+
+#Enrollment_Race_Data_2021$STABBR <- abbr2state(Enrollment_Race_Data_2021$STABBR)
+#Enrollment_Race_Data_2021<- #Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$Year == 2021, ]
+
+
+
+#StateVec <- unique(Enrollment_Race_Data_2021$STABBR)
+#for (values in StateVec){
+ # toSave <- ggplot(Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$STABBR == values, ], aes(x=diversity_index)) + 
+#    geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+ #   xlab("Diversity index for schools") +
+#    ylab("School count") +
+ #   xlim(0, 1) +
+  #  ggtitle(paste(values)) +
+   # theme(plot.title = element_text(hjust = 0.5), text = element_text(size = #20))
+  
+ # ggsave(paste0(values, ".png"), plot = toSave)
+#}
+
+
+
+# This is the code we use to generate  Java script Key-valuye pair in #interactive  component. We leave here for your reference.
+
+#dictionary <- '{'
+#for (row in 1:nrow(Enrollment_Race_Data_2021_Mean)) {
+ # if (row == 52) {
+  #  dictionary <- paste0(dictionary, '}')
+   # break;
+  #}
+  #if (row == 51){
+   # dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'", ':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",])
+    
+#  } else {
+ #   dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'",':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",], ',')
+#  }
+  
+#}
+
+
+Enrollment_Gender_Data <- Enrollment_Gender_Data %>% rename(
+  "UNITID" = "Unit.Id",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+
+Enrollment_Gender_Data <- Enrollment_Gender_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "Enrollment Amount",
+    values_transform = list(num_nests = as.integer)
+  )
+Enrollment_Gender_Data <- Enrollment_Gender_Data[Enrollment_Gender_Data$Race.ethnicity == "Total", ]
+Enrollment_Gender_Data_Men <- Enrollment_Gender_Data[Enrollment_Gender_Data$Gender == "Men", ]
+Enrollment_Gender_Data_Men <- Enrollment_Gender_Data_Men %>% rename(
+  "Enrolled_Men" = "Enrollment Amount")
+Enrollment_Gender_Data_Women <- Enrollment_Gender_Data[Enrollment_Gender_Data$Gender == "Women", ]
+Enrollment_Gender_Data_Women <- Enrollment_Gender_Data_Women %>% rename(
+  "Enrolled_Women" = "Enrollment Amount")
+Enrollment_Gender_Data_cleaned <- inner_join(Enrollment_Gender_Data_Men, Enrollment_Gender_Data_Women , by = c("UNITID", "Year"))
+Enrollment_Gender_Data_cleaned <- Enrollment_Gender_Data_cleaned[!Enrollment_Gender_Data_cleaned$Enrolled_Men == "-",]
+Enrollment_Gender_Data_cleaned <- Enrollment_Gender_Data_cleaned %>%
+  mutate(Male_to_Female_Ratio = as.integer(Enrolled_Men) / as.integer(Enrolled_Women)
+  )
+Enrollment_Gender_Data_cleaned <- Enrollment_Gender_Data_cleaned %>%
+  mutate(Gender_Demographics = case_when(
+    Enrollment_Gender_Data_cleaned$Male_to_Female_Ratio >= 1.1 ~ "Male Majority",
+    Enrollment_Gender_Data_cleaned$Male_to_Female_Ratio < 1.1 & 
+      Enrollment_Gender_Data_cleaned$Male_to_Female_Ratio >= 0.9~ "Neutral",
+    Enrollment_Gender_Data_cleaned$Male_to_Female_Ratio  < 0.9 ~ "Female Majority"
+  ))
+
+University_info$UNITID <- as.integer(University_info$UNITID)
+Enrollment_Gender_Data_cleaned <- inner_join(Enrollment_Gender_Data_cleaned, University_info, by = c("UNITID"))
+
+Enrollment_Gender_Data_cleaned_Aggregate <-Enrollment_Gender_Data_cleaned %>% group_by(Year, Gender_Demographics)  %>%
+  summarise(total_number = n())
+
+Enrollment_Gender_Data_cleaned_Aggregate_rightorder <- Enrollment_Gender_Data_cleaned_Aggregate 
+
+Enrollment_Gender_Data_cleaned_Aggregate_rightorder <- Enrollment_Gender_Data_cleaned_Aggregate_rightorder %>%
+  pivot_wider(names_from = Gender_Demographics, 
+              values_from = total_number, 
+              values_fill = 0)
+Enrollment_Gender_Data_cleaned_Aggregate_rightorder <- 
+  Enrollment_Gender_Data_cleaned_Aggregate_rightorder[c("Year", "Female Majority",
+                                                        "Neutral",
+                                                        "Male Majority")]
+diverging_Enrollment_Gender_All_School <- HH::likert(Year ~ ., Enrollment_Gender_Data_cleaned_Aggregate_rightorder, main="School demographics")
+
+
+```
+
+For both racial and gender diversity, we used pivot longer to move years from column time into a single column. We intend to use the choropleth map to visualize regional racial diversity. Thus we bin racial index (measurement of racial diversity between 0 and 1 )of each school to “High” and “Low” and use the ratio of “High” and “Low” school to categorize each state’s overall diversity.   We intend to use a diverging stacked bar chart for male to female ratio  of enrolled students, so we bin male to female ratio into 3 categories “female majority”, “neutral”, “male majority” to visualize gender demographics. 
+
+
+
+
 ## Missing value analysis
+We process Missing  value analysis with code available in the “Data_Missing_Value.R”. The code is also available in next R code chunk.
+
+We essentially process Enrollment data(In this case we only concern with total enrollment for each school), SAT, ACT, Admission data, and student aid data in the same fashion described before. We then join a separate data frame regarding each attribute with University Id being the primary key. We then perform missing value plotting on the joined data frame directly on the joined data frame to observe missing value patterns. 
+
+We now run data processing code on missing value. 
+```{r, echo = FALSE}
+library('cowplot')
+library("choroplethr")
+library("dplyr")
+library("forcats")
+library("gridExtra")
+library("ggplot2")
+library("ggpubr")
+library("ggridges")
+library("openintro")
+#remotes::install_github("jtr13/redav")
+library("redav")
+library("readr")
+library("readxl")
+library("tidyr")
+library("tidyverse")
+library("viridis")
+library("HH")
+library("jsonlite")
+
+University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
+
+
+SAT_Data_2017 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2017.xlsx"))
+SAT_Data_2018 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2018.xlsx"))
+SAT_Data_2019 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2019.xlsx"))
+SAT_Data_2020 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2020.xlsx"))
+SAT_Data_2021 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2021.xlsx"))
+ACT_Data_2017 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/ACT_Score_Data/ACT_Score_2017.xlsx"))
+ACT_Data_2018 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/ACT_Score_Data/ACT_Score_2018.xlsx"))
+ACT_Data_2019 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/ACT_Score_Data/ACT_Score_2019.xlsx"))
+ACT_Data_2020 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/ACT_Score_Data/ACT_Score_2020.xlsx"))
+ACT_Data_2021 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/ACT_Score_Data/ACT_Score_2021.xlsx"))
+Enrollment_Data<- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
+Admission_Data_2017 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Admission_Data/Admission_2017.xlsx"))
+Admission_Data_2018 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Admission_Data/Admission_2018.xlsx"))
+Admission_Data_2019 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Admission_Data/Admission_2019.xlsx"))
+Admission_Data_2020 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Admission_Data/Admission_2020.xlsx"))
+Admission_Data_2021 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Admission_Data/Admission_2021.xlsx"))
+out_state_tuition_Data<- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Tuition_Data/Pricetrend_out_state.xlsx"))
+in_state_tuition_Data<- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Tuition_Data/Pricetrend_in_state.xlsx"))
+Student_aid_Data<- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Student_Aid/Student_Aid_2017-2021.xlsx"))
+
+University_type <- unique(University_type[c("UNITID","CONTROL")])
+University_loc <- unique(University_loc[c("UNITID","STABBR")])
+University_loc$UNITID <- as.character(University_loc$UNITID)
+University_info <- inner_join(University_type, University_loc, by = c("UNITID"))
+University_info <- University_info %>% rename(
+  "Institution_type" = "CONTROL", 
+  "State" = "STABBR")
+
+
+
+SAT_Data_2017 <- SAT_Data_2017[, c("Unit.Id", "SAT.Math")]
+SAT_Data_2017 <- SAT_Data_2017 %>% mutate(Year = 2017)
+SAT_Data_2017$SAT.Math <- as.numeric(SAT_Data_2017$SAT.Math)
+SAT_Data_2017  <- SAT_Data_2017  %>% rename(
+  "SAT" = "SAT.Math")
+
+SAT_Data_2018 <- SAT_Data_2018[, c("Unit.Id", "SAT.Math")]
+SAT_Data_2018 <- SAT_Data_2018 %>% mutate(Year = 2018)
+SAT_Data_2018$SAT.Math <- as.numeric(SAT_Data_2018$SAT.Math)
+SAT_Data_2018  <- SAT_Data_2018  %>% rename(
+  "SAT" = "SAT.Math")
+
+SAT_Data_2019 <- SAT_Data_2019[, c("Unit.Id", "SAT.Math")]
+SAT_Data_2019 <- SAT_Data_2019 %>% mutate(Year = 2019)
+SAT_Data_2019$SAT.Math <- as.numeric(SAT_Data_2019$SAT.Math)
+SAT_Data_2019  <- SAT_Data_2019  %>% rename(
+  "SAT" = "SAT.Math")
+
+SAT_Data_2020 <- SAT_Data_2020[, c("Unit.Id", "SAT.Math")]
+SAT_Data_2020 <- SAT_Data_2020 %>% mutate(Year = 2020)
+SAT_Data_2020$SAT.Math <- as.numeric(SAT_Data_2020$SAT.Math)
+SAT_Data_2020  <- SAT_Data_2020  %>% rename(
+  "SAT" = "SAT.Math")
+
+SAT_Data_2021 <- SAT_Data_2021[, c("Unit.Id", "SAT.Math")]
+SAT_Data_2021 <- SAT_Data_2021 %>% mutate(Year = 2021)
+SAT_Data_2021$SAT.Math <- as.numeric(SAT_Data_2021$SAT.Math)
+SAT_Data_2021  <- SAT_Data_2021  %>% rename(
+  "SAT" = "SAT.Math")
+
+ACT_Data_2017 <- ACT_Data_2017[, c("Unit.Id", "ACT.Math")]
+ACT_Data_2017 <- ACT_Data_2017 %>% mutate(Year = 2017)
+ACT_Data_2017$ACT.Math <- as.numeric(ACT_Data_2017$ACT.Math)
+ACT_Data_2017  <- ACT_Data_2017  %>% rename(
+  "ACT" = "ACT.Math")
+
+ACT_Data_2018 <- ACT_Data_2018[, c("Unit.Id", "ACT.Math")]
+ACT_Data_2018 <- ACT_Data_2018 %>% mutate(Year = 2018)
+ACT_Data_2018$ACT.Math <- as.numeric(ACT_Data_2018$ACT.Math)
+ACT_Data_2018  <- ACT_Data_2018  %>% rename(
+  "ACT" = "ACT.Math")
+
+ACT_Data_2019 <- ACT_Data_2019[, c("Unit.Id", "ACT.Math")]
+ACT_Data_2019 <- ACT_Data_2019 %>% mutate(Year = 2019)
+ACT_Data_2019$ACT.Math <- as.numeric(ACT_Data_2019$ACT.Math)
+ACT_Data_2019  <- ACT_Data_2019  %>% rename(
+  "ACT" = "ACT.Math")
+
+ACT_Data_2020 <- ACT_Data_2020[, c("Unit.Id", "ACT.Math")]
+ACT_Data_2020 <- ACT_Data_2020 %>% mutate(Year = 2020)
+ACT_Data_2020$ACT.Math <- as.numeric(ACT_Data_2020$ACT.Math)
+ACT_Data_2020  <- ACT_Data_2020  %>% rename(
+  "ACT" = "ACT.Math")
+
+ACT_Data_2021 <- ACT_Data_2021[, c("Unit.Id", "ACT.Math")]
+ACT_Data_2021 <- ACT_Data_2021 %>% mutate(Year = 2021)
+ACT_Data_2021$ACT.Math <- as.numeric(ACT_Data_2021$ACT.Math)
+ACT_Data_2021  <- ACT_Data_2021  %>% rename(
+  "ACT" = "ACT.Math")
+
+Enrollment_Data <- Enrollment_Data %>% rename(
+  "UNITID" = "Unit.Id",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+
+Enrollment_Data <- Enrollment_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "Enrollment",
+    values_transform = list(num_nests = as.integer)
+  )
+Enrollment_Data <- Enrollment_Data[Enrollment_Data$Gender == "Total",]
+
+Enrollment_Data$Enrollment <- as.numeric(Enrollment_Data$Enrollment)
+Enrollment_Data <- Enrollment_Data[Enrollment_Data$Race.ethnicity == "Total",]
+
+Enrollment_Data<- subset(Enrollment_Data, select = -c(Gender, Race.ethnicity))
+Enrollment_Data$Enrollment <-as.numeric(Enrollment_Data$Enrollment)
+
+Admission_Data_2017 <- Admission_Data_2017[Admission_Data_2017$Gender == "Total",]
+Admission_Data_2017 <- Admission_Data_2017[, c("Unit.Id", "Number.admitted")]
+Admission_Data_2017 <- Admission_Data_2017 %>% mutate(Year = 2017)
+Admission_Data_2017$Number.admitted <- as.numeric(Admission_Data_2017$Number.admitted)
+Admission_Data_2017 <- Admission_Data_2017  %>% rename(
+  "Total_Admission" = "Number.admitted")
+
+Admission_Data_2018 <- Admission_Data_2018[Admission_Data_2018$Gender == "Total",]
+Admission_Data_2018 <- Admission_Data_2018[, c("Unit.Id", "Number.admitted")]
+Admission_Data_2018 <- Admission_Data_2018 %>% mutate(Year = 2018)
+Admission_Data_2018$Number.admitted <- as.numeric(Admission_Data_2018$Number.admitted)
+Admission_Data_2018 <- Admission_Data_2018  %>% rename(
+  "Total_Admission" = "Number.admitted")
+
+Admission_Data_2019 <- Admission_Data_2019[Admission_Data_2019$Gender == "Total",]
+Admission_Data_2019 <- Admission_Data_2019[, c("Unit.Id", "Number.admitted")]
+Admission_Data_2019 <- Admission_Data_2019 %>% mutate(Year = 2019)
+Admission_Data_2019$Number.admitted <- as.numeric(Admission_Data_2019$Number.admitted)
+Admission_Data_2019 <- Admission_Data_2019  %>% rename(
+  "Total_Admission" = "Number.admitted")
+
+Admission_Data_2020 <- Admission_Data_2020[Admission_Data_2020$Gender == "Total",]
+Admission_Data_2020 <- Admission_Data_2020[, c("Unit.Id", "Number.admitted")]
+Admission_Data_2020 <- Admission_Data_2020 %>% mutate(Year = 2020)
+Admission_Data_2020$Number.admitted <- as.numeric(Admission_Data_2020$Number.admitted)
+Admission_Data_2020 <- Admission_Data_2020  %>% rename(
+  "Total_Admission" = "Number.admitted")
+
+Admission_Data_2021 <- Admission_Data_2021[Admission_Data_2021$Gender == "Total",]
+Admission_Data_2021 <- Admission_Data_2021[, c("Unit.Id", "Number.admitted")]
+Admission_Data_2021 <- Admission_Data_2021 %>% mutate(Year = 2021)
+Admission_Data_2021$Number.admitted <- as.numeric(Admission_Data_2021$Number.admitted)
+Admission_Data_2021 <- Admission_Data_2021  %>% rename(
+  "Total_Admission" = "Number.admitted")
+
+out_state_tuition_Data <- out_state_tuition_Data%>% rename(
+  "UNITID" = "Unit.Id",
+  "Type_of_Pay" = "Type.of.cost...residency..and.student.housing",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+out_state_tuition_Data <- out_state_tuition_Data[out_state_tuition_Data$Type_of_Pay == "On-campus out-of-state",]
+out_state_tuition_Data <- out_state_tuition_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "Out_state_tuition",
+    values_transform = list(num_nests = as.integer)
+  )
+out_state_tuition_Data <- out_state_tuition_Data[, c("UNITID", "Year", "Out_state_tuition")]
+
+in_state_tuition_Data <- in_state_tuition_Data%>% rename(
+  "UNITID" = "Unit.Id",
+  "Type_of_Pay" = "Type.of.cost...residency..and.student.housing",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+in_state_tuition_Data <- in_state_tuition_Data[in_state_tuition_Data$Type_of_Pay == "On-campus in-state",]
+in_state_tuition_Data <- in_state_tuition_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "In_state_tuition",
+    values_transform = list(num_nests = as.integer)
+  )
+in_state_tuition_Data <- in_state_tuition_Data[, c("UNITID", "Year", "In_state_tuition")]
+
+Student_aid_Data <- Student_aid_Data %>% rename(
+  "UNITID" = "Unit.Id",
+  "Aid_type" = "...3",
+  "Data_representation" = "...4",
+  "2021" = "X2021",
+  "2020" = "X2020",
+  "2019" = "X2019", 
+  "2018" = "X2018",
+  "2017" = "X2017")
+Student_aid_Data <- Student_aid_Data[Student_aid_Data$Aid_type == "Institutional grants", ]
+Student_aid_Data <- Student_aid_Data[Student_aid_Data$Data_representation == "Average amount", ]
+Student_aid_Data <- Student_aid_Data %>% 
+  pivot_longer(
+    cols = c('2021', '2020', '2019', '2018', '2017'), 
+    names_to = "Year", 
+    names_transform = list(Year = as.integer),
+    values_to = "Student Aid",
+    values_transform = list(num_nests = as.integer)
+  )
+Student_aid_Data$`Student Aid` <- as.numeric(Student_aid_Data$`Student Aid`)
+Student_aid_Data<- Student_aid_Data[, c("UNITID", "Year", "Student Aid")]
+
+SAT_Data_Bind <- rbind(SAT_Data_2017, SAT_Data_2018, SAT_Data_2019, SAT_Data_2020, SAT_Data_2021)
+SAT_Data_Bind <- SAT_Data_Bind %>% rename(
+  "UNITID" = "Unit.Id")
+ACT_Data_Bind <- rbind(ACT_Data_2017, ACT_Data_2018, ACT_Data_2019, ACT_Data_2020, ACT_Data_2021)  
+ACT_Data_Bind <- ACT_Data_Bind %>% rename(
+  "UNITID" = "Unit.Id")
+Admission_Data <- rbind(Admission_Data_2017, Admission_Data_2018, Admission_Data_2019, Admission_Data_2020, Admission_Data_2021)
+Admission_Data <- Admission_Data %>% rename(
+  "UNITID" = "Unit.Id")
+SAT_Data_Bind$UNITID <- as.character(SAT_Data_Bind$UNITID)
+ACT_Data_Bind$UNITID <- as.character(ACT_Data_Bind$UNITID)
+Admission_Data$UNITID <- as.character(Admission_Data$UNITID)
+Student_aid_Data$UNITID <- as.character(Student_aid_Data$UNITID)
+
+Enrollment_Data$UNITID <- as.character(Enrollment_Data$UNITID)
+
+Missing_Val_Analysis_table <- left_join(Enrollment_Data, Student_aid_Data, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table <- left_join(Missing_Val_Analysis_table, Admission_Data, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table <- left_join(Missing_Val_Analysis_table, in_state_tuition_Data, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table <- left_join(Missing_Val_Analysis_table, out_state_tuition_Data, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table <- left_join(Missing_Val_Analysis_table, SAT_Data_Bind, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table <- left_join(Missing_Val_Analysis_table, ACT_Data_Bind, by = c("UNITID", "Year"))
+Missing_Val_Analysis_table  <- Missing_Val_Analysis_table %>% rename(
+  "Admit" = "Total_Admission",
+  "Insti_Aid" = "Student Aid",
+  "In_Tuition"="In_state_tuition",
+  "Out_Tuition" = "Out_state_tuition")
+
+University_info$UNITID <- as.character(University_info$UNITID)
+Missing_Val_school_Type <- left_join(Missing_Val_Analysis_table, University_info, by = c("UNITID"))
+
+Missing_Val_fpPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, for-profit",
+                                                               c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+Missing_Val_npPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, nonprofit",
+                                                               c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+Missing_Val_public <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Public", 
+                                                            c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+
+```
+
+
+### Missing value regarding Institutrional type
+In our data set, the missing data are due to the fact that not every school would provide every piece of data the National Center for Education Statistics(NCES) requires. The team has visualized missing pattern for all types(public, non-profit private, and for-profit private) of schools from 2017 and 2021, but, beside a very slight raise on the percentage of data missing instances, no drastic change of pattern has been observed. The team than evaluated missing pattern for 3 types of institutions, where a conspicuous difference is observed.
+
+Missing pattern for for profit private school:
+```{r, echo = TRUE}
+
+Missing_Val_fpPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, for-profit",
+                                                               c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+
+Missing_Val_fpPrivate
+
+```
+The missing pattern for non-profit private schools:
+
+```{r, echo = TRUE}
+Missing_Val_npPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, nonprofit",
+                                                               c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+
+Missing_Val_npPrivate
+
+```
+
+The missing pattern for public school:
+```{r, echo = TRUE}
+Missing_Val_public <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Public", 
+                                                            c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
+
+Missing_Val_public
+
+```
+In all 3 plots, we see in popular missing patterns in each plot, SAT and ACT scores are usually both missing. The team initially assumed the missing value for SAT and ACT increases as over 2017-2021 since pandemics has compelled many institutions to adapt "No mandatory test score for application" policy. However, regardless of year and institution type, emitting both test scores data is always a popular pattern. Since test score of admitted students is an importance criterior of institutional competitiveness, it is likely non-competitive institutions prefer not to divulge the score of admitted students. This assumption is rejected since the team observes high variability in test score. The team eventually conclude that SAT and ACT score, unlike what many Chinese students like us used to believe as an imperative metrics for admission to US institutions, is not required by most US institutions and therefore is emitted in report from many institutions. 
+
+The team observes that the for-profit institutions have least variation in missing pattern. This is because the missing pattern where "no data is provided" is dominant with row missing percentage of 50%. Though we can't conclude 50% institutions provide no data each year since data available from each institutions varies, 50% rate of "no data provided" is really astonishing. On average, only less than 5% institutions provide complete data each year. Given IPEDS is a survey by an NCES to monitor institutions receiving federal grand, which does not directly provide fund to for-profit private school, the team concludes the IPEDS data is not a good metric to evaluate for-profit schools whose fund is not provided by federal government due to apparently limited data availability from for-profit institutions. 
+
+The team observes that the non-profit institutions have roughly same percentage (around 25%) of incidences for "ALl data is provided" and "No data is provided". Around 50% provides all datas except ACT and SAT score. Compare to for-profit private schools, non-profit private schools provide demonstrates higher data availability, making IPEDS a better data source to evaluate non-profit private schools than for-profit schools.
+
+For public schools, though the percentage of complete data is lower than that of non-profit private school, the missing patterns shows that public schools are more likely to provide data relevant to life quality of admitted students, such as student aid, tuition, and enrollment, than private schools. More than 60% of times public schools would provide such information. The availability of data relevant to admitted students experience makes IPEDS data set a good data source to evaluate cost and benefit of public institution. 
+
+The main take away from the missing value analysis is that the relationship between data collector and data provider would impact availability of data. Since for-profit private schools generally do not reveive federal grant, they are not as obligated to provide data related to education benefit as public school and non-profit school that receives some government grant. Simply presuming quality of data collected by government institution is a naive heuristic to evaluate the quality of data. 
 
