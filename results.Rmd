@@ -1,5 +1,74 @@
 # Results
 
+## Result relating to admission
+
+The first thing we care about is the admission. Did the pandemic influence the number of admission? Is admission rate related to the gender and institution type? Did the pandemic influence the admission standard? In this part, we plotted four graphs and got some insights relating to the admission.
+
+### Number of admission according to gender and institution type in 2017-2021
+```{r}
+Admission_Gender <- Admission %>% filter(Gender != "T")
+stack_bar_gender_population <- ggplot(Admission_Gender, aes(fill=Gender, y= Admssn, x=Year)) + 
+  geom_bar(position="stack", stat="identity") +
+  xlab("Year") +
+  ylab("Number of admission Students") +
+  facet_grid(~Institution_type) +
+  ggtitle("Number of Admission Men and Women 2017-2021") 
+stack_bar_gender_population
+```
+From the graph of admission number, we found that the public institution has the highest total admission number and the private for-profit institution has the lowest total admission number. Observing the data of different years, we can find that the total admission number increased over 2017 to 2021 for public and private non-profit institution, while the total admission number for private for-profit institution decreased in 2021. In the view of different genders, we can see that the total number of admission woman is larger than that of admission man for all types of institution in every year. 
+
+### Admission rate according to institution type in 2017-2021
+```{r}
+ggplot(Admission %>% filter(Gender == "T"), aes(x=Institution_type,y=Admssn/Applcn)) +
+  geom_boxplot(aes(colour = Year)) +
+  ggtitle("Admission rate in different years according to Institution type") +
+  labs(y="Admission rate", x="Year") +
+  scale_colour_brewer(palette = "Dark2")
+```
+
+We take the admission number divided by the application number as the admission rate. We first group the data according to institution type to see whether the admission rate is relating to the institution type. From this graph, we find that private for-profit institution always has the highest admission rate while the private nonprofit institution has the lowest admission rate. Observing the data in different years, we can see that the median admission rate for private nonprofit institution and public institution increased over the years, and the growth is particularly marked in 2021. while for private for-profit institution, the data fluctuated. Compared with private for-profit institution, private non-profit and public institution have lower variance and more outliers.
+
+
+### Admission rate according to gender and institution type in 2017-2021
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Admission_rate_year_type <- Admission %>%
+  filter(Gender != "T",) %>%
+  group_by(Year, Institution_type, Gender) %>%
+  summarise(Admission_rate = sum(Admssn)/sum(Applcn))
+ggplot(Admission_rate_year_type, aes(x = Year, y = Admission_rate, fill = Gender)) +
+  geom_col(position = "dodge")+
+  facet_wrap(~Institution_type) +
+  ggtitle("Admission rate in different years according to gender and Institution type") +
+  labs(y="Admission rate", x="Year")
+```
+
+Besides the institution type, we also consider the gender as a factor of admission rate. For private nonprofit and public institution, the woman admission rate is always higher than man. On the contrary, for private for-profit institution, we find that the woman admission rate is lower than man admission rate. From this observation, we can infer that woman applicants have higher opportunity to be admitted for public and private non-profit institution.
+
+
+### SAT mean scores according to subjects and institution type in 2017-2021
+```{r}
+SAT_score_math <- SAT_score %>%
+  group_by(Year, Institution_type) %>%
+  summarise(SAT_math = mean(SAT_MT))
+SAT_score_verble <- SAT_score %>%
+  group_by(Year, Institution_type) %>%
+  summarise(SAT_verble = mean(SAT_VR))
+SAT_score_avg <- inner_join(SAT_score_math, SAT_score_verble, by=c("Year", "Institution_type")) %>% 
+  pivot_longer(
+    cols = c(SAT_math, SAT_verble), 
+    names_to = "Subject", 
+    values_to = "Mean_score"
+  )
+ggplot(SAT_score_avg, aes(x = Year, y=Mean_score)) +
+  geom_line(aes(color = Institution_type)) +
+  facet_wrap(~Subject) +
+  ggtitle("Mean SAT scores according to subjects and institution type in 2017-2021") +
+  labs(y="Mean score", x="Year")
+```
+We use mean SAT score as a standard of admission difficulty. From the graph, we can see that the admitted students have higher mean SAT verble scores than mean SAT math scores. Observing the line for different institution, we find that private nonprofit institution always have higher SAT requirement than public institution. Compared to the other two types of institution, the standard for private for-profit has pretty large variance in different years.
+
+
 ## School Aid over the pandemics
 
 US institutions are known for its notoriously high tuition fee. The team had observed inflation and ecnomic recession during the pandemics and suspect such event would severely compromise financial capability of US institutions. Therefore, the team was interested to explore change pattern of institutional grant schools provide to their students as an effort schools put to help students through the difficult time. 
