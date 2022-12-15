@@ -12,30 +12,7 @@ The team assumed good data availability due to the fact that the data is collect
 
 Initially, the team planned to treat student earning as a crucial part of analysis. Nothing reflects education benefit better than student earning for most middle-class and lower-class people who seek social mobility from education. However, the earning data is not available from IPEDS. The team founds earning data from College score card (https://collegescorecard.ed.gov/), a database maintained by U.S. Department of Education who also uses IPEDS data to help college applicants visualize cost and gain of different institutions. However, only one year earning data is available, many of which are also "na". The lack of available data compels team to explore other data patterns and analyze evolution of US education statics over the pandemics without focuing on cost-benefit analysis, which was the team's original intention. 
 
-
-
-
-## Cleaning / transformation
-
-We processed admission related data in the “data_admission.R”.
 ```{r, echo = TRUE}
-source("data_admission.R", local = knitr::knit_global())
-```
-For the institution type, we extracted the UNIT ID as a primary key to join the institution type with other data frames. We have three types of institutions, public, private nonprofit, and private for-profit.
-For the SAT score, after importation, we totally have five files, and each one stores the SAT score for one year.  We first used NA to replace all NULL values and removed all rows with NA in each file. Then we use rbind() to bind five-year data into one data frame. Finally, we use inner_join() to join the SAT score and UNIT ID.
-For the admission information, we first removed one column with all NA values and then removed all rows with NA.  Each observation has three features, type (application number or admission number), gender (total or woman or man), and year (2017-2021). Therefore, we first applied pivot_longer() to generate a 3-column data frame and then applied pivot_wider() to generate a 5-column data frame to take each feature as a separate column.
-
-We processed cost efficiency related data in the “data_earning&tuition.R”.
-```{r, echo = TRUE}
-source("data_earning&tuition.R", local = knitr::knit_global())
-```
-For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
-For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
-For tuition vs earning data, we first removed the row with NA in both the tuition column and the mean earning column, then we joined two the tuition data set and the  Most-Recent-Cohorts-Institution.csv
-
-We process Student aid related data in the “Data_Student_Aid.R”
-```{r, echo = False}
-
 library('cowplot')
 library("choroplethr")
 library("dplyr")
@@ -56,6 +33,89 @@ library("viridis")
 library("HH")
 library("jsonlite")
 library("colorspace")
+```
+
+## Cleaning / transformation
+
+We processed admission related data in the “data_admission.R”.
+```{r, echo = TRUE}
+## Import and transform institution type
+
+Institution_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
+Institution_type <- unique(Institution_type[c("UNITID","CONTROL")]) %>% rename(
+  "Institution_type" = "CONTROL"
+)
+
+## Import and transform SAT score
+
+Import_SAT <- function(filename, year) {
+  df <- data.frame(read_csv(paste("./data_folder/CollegeScorecard_Raw_Data/", filename, sep=""), show_col_types = FALSE))
+  df <- df[c("UNITID","SATVRMID", "SATMTMID")] %>% rename(
+    "SAT_VR" = "SATVRMID",
+    "SAT_MT" = "SATMTMID") %>% mutate(
+      Year = year
+    ) 
+  df[df == "NULL"] <- NA
+  df <- df %>% filter( rowSums(is.na(df)) == 0)
+  class(df$SAT_VR) = "numeric"
+  class(df$SAT_MT) = "numeric"
+  return <- df
+}
+
+SAT2017 <- Import_SAT("MERGED2017_18_PP.csv", 2017)
+SAT2018 <- Import_SAT("MERGED2018_19_PP.csv", 2018)
+SAT2019 <- Import_SAT("MERGED2019_20_PP.csv", 2019)
+SAT2020 <- Import_SAT("MERGED2020_21_PP.csv", 2020)
+SAT2021 <- Import_SAT("Most-Recent-Cohorts-Institution.csv", 2021)
+
+SAT_score <- rbind(SAT2017, SAT2018, SAT2019, SAT2020, SAT2021)
+
+class(SAT_score$UNITID) = "character"
+SAT_score <- inner_join(Institution_type, SAT_score, by = c("UNITID"))
+
+## Import and transform admission information
+
+Admission <- data.frame(read_csv("./data_folder/Admission_Data/Admission_2017-2021.csv", show_col_types = FALSE))
+
+Admission <- subset(Admission, select = -c(...33) )
+Admission <- Admission %>% filter( rowSums(is.na(Admission)) == 0)
+
+names(Admission) <- c("UNITID", "Institution_Name", "Applcn_T_2021", "Applcn_M_2021", "Applcn_W_2021", "Admssn_T_2021", "Admssn_M_2021", "Admssn_W_2021", "Applcn_T_2020", "Applcn_M_2020", "Applcn_W_2020", "Admssn_T_2020", "Admssn_M_2020", "Admssn_W_2020", "Applcn_T_2019", "Applcn_M_2019", "Applcn_W_2019", "Admssn_T_2019", "Admssn_M_2019", "Admssn_W_2019", "Applcn_T_2018", "Applcn_M_2018", "Applcn_W_2018", "Admssn_T_2018", "Admssn_M_2018", "Admssn_W_2018", "Applcn_T_2017", "Applcn_M_2017", "Applcn_W_2017", "Admssn_T_2017", "Admssn_M_2017", "Admssn_W_2017")
+
+Admission <- Admission %>% 
+  pivot_longer(
+    cols = colnames(Admission)[-(1:2)], 
+    names_to = "Type", 
+    values_to = "Student_Number",
+    values_transform = list(num_nests = as.integer)
+  )
+
+Admission <- Admission %>%
+  separate(col = Type, into = c("Type", "Gender", "Year"), sep = "\\_")
+
+Admission <- Admission %>% 
+  pivot_wider(
+    names_from = Type, 
+    values_from = Student_Number
+  )
+
+class(Admission$UNITID) = "character"
+Admission <- inner_join(Institution_type, Admission, by = c("UNITID"))
+```
+For the institution type, we extracted the UNIT ID as a primary key to join the institution type with other data frames. We have three types of institutions, public, private nonprofit, and private for-profit.
+For the SAT score, after importation, we totally have five files, and each one stores the SAT score for one year.  We first used NA to replace all NULL values and removed all rows with NA in each file. Then we use rbind() to bind five-year data into one data frame. Finally, we use inner_join() to join the SAT score and UNIT ID.
+For the admission information, we first removed one column with all NA values and then removed all rows with NA.  Each observation has three features, type (application number or admission number), gender (total or woman or man), and year (2017-2021). Therefore, we first applied pivot_longer() to generate a 3-column data frame and then applied pivot_wider() to generate a 5-column data frame to take each feature as a separate column.
+
+We processed cost efficiency related data in the “data_earning&tuition.R”.
+```{r, echo = TRUE}
+source("data_earning&tuition.R", local = knitr::knit_global())
+```
+For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
+For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
+For tuition vs earning data, we first removed the row with NA in both the tuition column and the mean earning column, then we joined two the tuition data set and the  Most-Recent-Cohorts-Institution.csv
+
+We process Student aid related data in the “Data_Student_Aid.R”
+```{r, echo = False}
 
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
 
