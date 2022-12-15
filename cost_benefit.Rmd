@@ -1,0 +1,84 @@
+# Cost(tuition)-benefit(earning) of university
+
+## tuition vs rank
+
+
+**Data:** `QS_ranking_2021` 
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(forcats)
+```
+## Intro
+
+In this section, we are exploring the relation between tuition (cost) and earning after graduation/university rank (pay off).
+Also we introduce the concept of cost efficiency index calculated by mean earning / mean tuition of each university.
+
+
+## tuition ranking per year
+
+```{r}
+
+#        by=c('Institution'='Institution.name', 'year' = 'year'))
+
+ggplot(df_rank_out_state, aes(x = tuition, y = fct_reorder(Institution.name, Rank, .desc = TRUE))) +
+geom_point() +
+labs(y = "institution", title = "tuition of top 25 universities in 2021")
+#per_year_fee_df[per_year_fee_df$Institution.name == 'California Institute of Technology - Caltech',]
+#per_year_fee_df
+#(per_year_fee_df$Institution.name)
+#table(qs_top_50_count$Institution)
+# top_25_2021$Institution <- as.character(top_25_2021$Institution) 
+# out_state_2021$Institution.name <- as.character(out_state_2021$Institution.name) 
+# summary(top_25_2021)
+# summary(out_state_2021)
+# top_25_2021[top_25_2021$Institution == 'Princeton University']
+```
+This plot explores the relation between institution rank (top 25) and average tuition. From the plot, we can see a approximately linear relationship, 
+that university with high rank tend to have more tuition that university with low rank. This not only can be explained by high quality education requires more cost but also can be explained by the fact that most of the high rank universities are private universities which are generally have more average tuition than public universities.
+
+
+```{r,fig.height=6}
+dev.new(width=200, height=50, unit="px")
+ggplot(rbind(per_year_fee_df_50_instate, per_year_fee_df_50_outstate), aes(x = tuition, y = fct_reorder(Institution.name, tuition, .desc = FALSE))) +
+geom_point(aes(color = tuition_type, alpha = 0.5)) + facet_wrap(~year) +
+labs(y = "institution", title = "In state tuition vs out state tuition in five years")
+
+```
+From this Cleveland dot plot, we can clearly see that in-state tuition is usually less than out-state tuition.
+## earning v.s. tuition
+```{r}
+
+ggplot(mean_tuition_df, aes(x = year, y = tuition_mean,fill=tuition_type)) + geom_bar(position="dodge",stat="identity")
+
+```
+We averaged the tuition for each year from last plot (Cleveland dot plot) and drew this bar plot. We can clearly see from this plot that average in-state tuition is less than out-state tuition in any year of these five years. Also, the tuition was gradually increasing over these five years.
+
+
+```{r}
+
+ggplot(df_rank_earning_out_state, aes(x = institution_earning_vs_tuition, y = fct_reorder(Institution.name, Rank, .desc = TRUE))) +
+geom_point() +
+labs(y = "institution", title = "cost_efficiency of top 25 universities in 2021")
+```
+In this cleveland dot plot, we calculated the cost-efficient for each university. From the plot, we know that the top 25 university with highest cost-efficiency is MIT and the university with lowest cost-efficiency will be New York University.
+
+```{r}
+#earning_df$MN_EARN_WNE_P10[earning_df$MN_EARN_WNE_P10 == 'PrivacySuppressed'] <- NA
+earning_df_dropna_tail
+```
+
+
+
+```{r,fig.height=6}
+out_state <- ggplot(earning_vs_out_state) + 
+  geom_point(aes(x = MN_EARN_WNE_P10,y = INSTNM, colour = "mean earning")) + 
+  geom_point(aes(x = X2021,y = INSTNM, colour = "tuition")) + labs(y = "institution", title = "Universities : in state tuition vs top 50 earning after graduation")
+in_state <- ggplot(earning_vs_in_state) + 
+  geom_point(aes(x = MN_EARN_WNE_P10,y = INSTNM, colour = "mean earning")) + 
+  geom_point(aes(x = X2021,y = INSTNM, colour = "tuition")) + labs(y = "institution", title = "Universities : out state tuition vs top 50 earning after graduation")
+out_state
+in_state
+```
+In this plot, we observe that most of university's mean tuition are around 75000 except some outliers. We know that the cost-efficiency is, for the most of time, determined by the earning after graduation. So it's true that the better the university the higher the cost-efficiency.
