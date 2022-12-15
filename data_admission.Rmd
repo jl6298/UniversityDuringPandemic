@@ -1,0 +1,74 @@
+---
+title: "data_admission"
+output: html_document
+date: "2022-12-14"
+---
+
+## Import and transform institution type
+```{r}
+Institution_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
+Institution_type <- unique(Institution_type[c("UNITID","CONTROL")]) %>% rename(
+  "Institution_type" = "CONTROL"
+)
+```
+
+
+## Import and transform SAT score
+```{r}
+Import_SAT <- function(filename, year) {
+  df <- data.frame(read_csv(paste("./data_folder/CollegeScorecard_Raw_Data/", filename, sep=""), show_col_types = FALSE))
+  df <- df[c("UNITID","SATVRMID", "SATMTMID")] %>% rename(
+  "SAT_VR" = "SATVRMID",
+  "SAT_MT" = "SATMTMID") %>% mutate(
+    Year = year
+  ) 
+  df[df == "NULL"] <- NA
+  df <- df %>% filter( rowSums(is.na(df)) == 0)
+  class(df$SAT_VR) = "numeric"
+  class(df$SAT_MT) = "numeric"
+  return <- df
+}
+
+SAT2017 <- Import_SAT("MERGED2017_18_PP.csv", 2017)
+SAT2018 <- Import_SAT("MERGED2018_19_PP.csv", 2018)
+SAT2019 <- Import_SAT("MERGED2019_20_PP.csv", 2019)
+SAT2020 <- Import_SAT("MERGED2020_21_PP.csv", 2020)
+SAT2021 <- Import_SAT("Most-Recent-Cohorts-Institution.csv", 2021)
+
+SAT_score <- rbind(SAT2017, SAT2018, SAT2019, SAT2020, SAT2021)
+
+class(SAT_score$UNITID) = "character"
+SAT_score <- inner_join(Institution_type, SAT_score, by = c("UNITID"))
+```
+
+
+## Import and transform admission information
+```{r}
+Admission <- data.frame(read_csv("./data_folder/Admission_Data/Admission_2017-2021.csv", show_col_types = FALSE))
+
+Admission <- subset(Admission, select = -c(...33) )
+Admission <- Admission %>% filter( rowSums(is.na(Admission)) == 0)
+
+names(Admission) <- c("UNITID", "Institution_Name", "Applcn_T_2021", "Applcn_M_2021", "Applcn_W_2021", "Admssn_T_2021", "Admssn_M_2021", "Admssn_W_2021", "Applcn_T_2020", "Applcn_M_2020", "Applcn_W_2020", "Admssn_T_2020", "Admssn_M_2020", "Admssn_W_2020", "Applcn_T_2019", "Applcn_M_2019", "Applcn_W_2019", "Admssn_T_2019", "Admssn_M_2019", "Admssn_W_2019", "Applcn_T_2018", "Applcn_M_2018", "Applcn_W_2018", "Admssn_T_2018", "Admssn_M_2018", "Admssn_W_2018", "Applcn_T_2017", "Applcn_M_2017", "Applcn_W_2017", "Admssn_T_2017", "Admssn_M_2017", "Admssn_W_2017")
+
+Admission <- Admission %>% 
+  pivot_longer(
+    cols = colnames(Admission)[-(1:2)], 
+    names_to = "Type", 
+    values_to = "Student_Number",
+    values_transform = list(num_nests = as.integer)
+  )
+
+Admission <- Admission %>%
+  separate(col = Type, into = c("Type", "Gender", "Year"), sep = "\\_")
+
+Admission <- Admission %>% 
+  pivot_wider(
+    names_from = Type, 
+    values_from = Student_Number
+  )
+
+class(Admission$UNITID) = "character"
+Admission <- inner_join(Institution_type, Admission, by = c("UNITID"))
+
+```
