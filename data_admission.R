@@ -1,7 +1,7 @@
 
 ## Import and transform institution type
 
-Institution_type <- data.frame(read_csv("./data_folder/CollegeScorecard_Raw_Data/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
+Institution_type <- data.frame(read_csv("./resources/data_folder/data_Xindi/Most-Recent-Cohorts-Field-of-Study.csv", show_col_types = FALSE))
 Institution_type <- unique(Institution_type[c("UNITID","CONTROL")]) %>% rename(
   "Institution_type" = "CONTROL"
 )
@@ -9,7 +9,7 @@ Institution_type <- unique(Institution_type[c("UNITID","CONTROL")]) %>% rename(
 ## Import and transform SAT score
 
 Import_SAT <- function(filename, year) {
-  df <- data.frame(read_csv(paste("./data_folder/CollegeScorecard_Raw_Data/", filename, sep=""), show_col_types = FALSE))
+  df <- data.frame(read_csv(paste("./resources/data_folder/data_Xindi/", filename, sep=""), show_col_types = FALSE))
   df <- df[c("UNITID","SATVRMID", "SATMTMID")] %>% rename(
     "SAT_VR" = "SATVRMID",
     "SAT_MT" = "SATMTMID") %>% mutate(
@@ -35,7 +35,7 @@ SAT_score <- inner_join(Institution_type, SAT_score, by = c("UNITID"))
 
 ## Import and transform admission information
 
-Admission <- data.frame(read_csv("./data_folder/Admission_Data/Admission_2017-2021.csv", show_col_types = FALSE))
+Admission <- data.frame(read_csv("./resources/data_folder/data_Xindi/Admission_2017-2021.csv", show_col_types = FALSE))
 
 Admission <- subset(Admission, select = -c(...33) )
 Admission <- Admission %>% filter( rowSums(is.na(Admission)) == 0)
