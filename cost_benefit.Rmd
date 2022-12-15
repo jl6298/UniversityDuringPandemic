@@ -1,22 +1,12 @@
-# Cost(tuition)-benefit(earning) of university
+## Cost(tuition)-benefit(earning) of university
 
-## tuition vs rank
-
-
-**Data:** `QS_ranking_2021` 
-```{r}
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(forcats)
-```
-## Intro
+### tuition vs rank
 
 In this section, we are exploring how tuition of universities changed over the pandemic as well as the relation between tuition (cost) and earning after graduation/university rank (pay off).
 Also we introduce the concept of cost efficiency index calculated by mean earning / mean tuition of each university.
 
 
-## tuition ranking per year
+### tuition ranking per year
 
 ```{r}
 
@@ -47,7 +37,7 @@ labs(y = "institution", title = "In state tuition vs out state tuition in five y
 
 ```
 From this Cleveland dot plot, we can clearly see that in-state tuition is usually less than out-state tuition.
-## earning v.s. tuition
+### earning v.s. tuition
 ```{r}
 
 ggplot(mean_tuition_df, aes(x = year, y = tuition_mean,fill=tuition_type)) + geom_bar(position="dodge",stat="identity")
