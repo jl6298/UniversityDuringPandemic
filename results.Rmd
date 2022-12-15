@@ -1,1 +1,71 @@
 # Results
+
+## School Aid over the pandemics
+
+US institutions are known for its notoriously high tuition fee. The team had observed inflation and ecnomic recession during the pandemics and suspect such event would severely compromise financial capability of US institutions. Therefore, the team was interested to explore change pattern of institutional grant schools provide to their students as an effort schools put to help students through the difficult time. 
+
+The team explored two parts of students grand. One is the percentage of students who actually received the institutional grant, and another part involves the change of average amount of grant schools provided to their student in each US state over the pandemics.
+### Percentage of Grant Receiver Over the pandemics
+
+
+The team divide schools based on institutional type, and for each school, the team binned its percentage of grant receiver into 4 bins in percentile. The team than drawn histogram for percentage of grant receiver faceting over institution type, and the plot is drawn for 5 years from 2017 to 2021. 
+
+```{r, echo = TRUE}
+total_plot_percent_grant
+
+```
+
+The "Not provided" means the school does not provide data abvout their institutional grant. This does not necessarily mean their provide no grant at all. 
+
+The team did not observe significant change of grant receiver percentage for US institutions over 2017-2021. However, The team observe significant difference of receiver percentage across different types of institutions. 
+
+The for profit institutions has highest proportion of schools providing grant to only 0-25% of their students. The team inferred that the tuition is the major source of for profit institutions, and therefore, regardless of presence of pandemics, those institutions would not provide funds to most of their students. 
+
+The non-profit institutions has highest proportion of schools providing grand to 75-100% of their students. In practice, non-profit institutions receive significant donation from high achieving alumnus, which supports distribution of institutional grants even in times of economic recession. Therefore, for students admitted to non-profit schools, majority of them still enjoy the grant from institutions. Given expensive tuition by non-profit schools, institutional grant is crucial in guaranteeing enrollment of prospective students. 
+
+The public schools has highest variation over the percent of grant receiver.  Unlike non-profit private schools that generally provide funds to most of their students and for-profit private schools that generally does not provide funds to most of their students, the distribution of schools with different percentage of grant receiver is more smooth. However, the mode for public school grant receiver percentage is still 0-25%. Whether this is because students generally receive government grant to support their education or public schools has lower bar of admission with limited fund provided is a question worth exploring. The high variability of percentage of grant receiver for public school is a potential topic for future exploration. 
+### Changeof  Average amount of institutional grant over the pandemics
+
+The team plotted change of average institutional grant provided by schools in each state  in a choropleth map. The map on top is the change of average grant amount from 2017 to 2019, which is regarded as "change before the pandemics". The map on bottom is the change of average grant amount from 2019 to 2021, which is regarded as "change after the pandemics".
+
+```{r, echo = TRUE}
+grid.arrange(Grant_Map_2017_2019, Grant_Map_2019_2021)
+```
+
+The team observed an intriguing polarizing pattern in the change of institutional grand before and after the pandemics.  The white is the middle value that indicates no change. The red hue indicates the average amount of institutional grand in that state had decreased between the years shown in plot title; the darker the red hue the more decrease in average institution grand of the colored state. The blue hue indicates that the average amount of institutional grand in that state had increased between the years shown in plot title; the darker the hue the more increase in the grant. 
+
+Before the pandemics, only a fraction of states experience decrease in average institutional grant. Only two states, Wyoming and South Dakota, experienced decrease. In general, US states experience minor increases in average institutional grant over 2017-2019.
+
+However, between 2019 and 2021, the pattern in the change of average institutional grant is very polarized. In west part of middle west and south of US, the team observes significant drop of institutional grand in magnitude of 500 USD. On the other hand, states near great lake region, such as Illinois, Michigan, and Indiana, experience increase in student aid between 500 USD and 2000 USD. There exists disparity in the change of financial supports over schools in different region, especially between the regions discussed (South and west of Mid west Vs The Great lake Region). The team suspect the change in institutional grand reflect financial well being of institutions in different state before the pandemics. Some states are equipped with institutions that are willing and able to provide more supports to students who might be financially compromised due to pandemics and some states possess institutions that might experience financial difficulty and therefore become less capable to support their students. 
+
+The pattern observed might help readers in need of financial aid better identify the financial capability of institutions in different states.
+
+## Diversity over the Pandemics
+
+The economic impact of pandemic is profound for people fo all social class in US. From the team's experience, racial ethnicity is, in general, correlated with financial prowess of families in US. Also gender identity could be relevant to the persuit of education since gender equality issue in education did not arise until mid 20th century. The team which to explore how does pandemic impact enrollment of people of different race in US. 
+
+### Change of Racial Diversity over the Pandemics
+
+The team quantifies Racial diversity of each institution using the concept of "Diversity Index" (https://www.ed-data.org/article/Ethnic-Diversity-Index). The index in a university refers to probability that we pick two people of different races if we pick any two people from that university. The team computed diversity index of each school in each state over 2017-2021: A school is considered "High Diversity" is its Diversity Index exceeds 0.5. Otherwise, the school is considered "Low Diversity". The team computer percentage of High Diversity School in each state each year over 2019-2021 as following:
+
+```{r, echo = TRUE}
+grid.arrange(High_Diversity_Percentage_2017_map,
+                                    High_Diversity_Percentage_2018_map,
+                                    High_Diversity_Percentage_2019_map,
+                                    High_Diversity_Percentage_2020_map,
+                                    High_Diversity_Percentage_2021_map)
+
+```
+
+Initially the team expect decrease in diversity because Racial minority groups are more financially vulnerable and therefore would suffer from lower enrollment during the pandemics. However, the plot shows the percentage of high diversity schools experience very minor change in each state. The color change in Utah and Florida are due to small fluctuation over the verge of percentage bins. Therefore, though the team could not make inference on change of racial demographic over the pandemics, the pandemics does not impact overall racial diversity as the team assumed before analysis. 
+
+
+### Change of Gender Diversity over the Pandemics
+
+To analyze how gender diversity changes during the pandemics, the team divide schools into 3 categories. If a school has its male to female ratio higher than 1.1, the school is categorized as "Male Majority" school. If a school has its male to female ratio between 1.1 and 0.9, the school is categorized as "Neutral" school. If a school has its male to female ratio below 0.9 and above 0, the school is categorized as "Female Majority" school. The team initially assumed the gender demographics is more impervious of economic impact than racial demographics. However, a likert plot of numbers of "Male Majority", "Neutral", and "Female Majority" Schools shows a clear pattern of changing gender demographics.
+```{r, echo=TRUE}
+plot(diverging_Enrollment_Gender_All_School)
+```
+As one can observe, there are steadily increasing numbers of Female Majority school from 2017 to 2021. The number of Male majority School experience only very minor change, and the "White bar" for Gender Neutral School has shrunken. Therefore, it is safe to infer that more and more gender "Neutral" school has become "Female Majority School" over the pandemics. In fact, from the analysis of admission pattern over the pandemics, the team observed that admission of female students indeed experience increase even before the pandemics, though the ratio of admitted male to admitted female students does not seem as as radically as observed in the graph above. Looking more closely, one can see that Increase of Female Majority school took place more readily before the pandemics (before 2019), but shrinking of Neutral category took place more apparently after 2019. The team is yet to conclude what accounts for the more and more Female Majority gender demographics over the pandemics. 
+
+

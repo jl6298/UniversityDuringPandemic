@@ -7,3 +7,10 @@ site: bookdown::bookdown_site
 
 # Introduction
 
+The outbreak of Covid 19 has had a tremendous impact in education practice of US institutions. As students have less opportunities to engage in on campus activities and crucial course works transitioned to online teaching platforms, many of them have had their academic performance and educational gain compromised. As Columbia students who have paid substantial tuition fees, the team is interested to evaluate how pandemics have impacted different aspects of US higher education, especially those crucial to student experience and gain. 
+.  
+Has tuition gotten more expensive? Has the bar of admission been raised? Have the schools started to provide less or more aid to students whose financial situations are influenced by the pandemics? How does pandemics change racial/gender demographics in US institutions?  Are all schools in the US willing to provide data to help people evaluate their performance? All those aspects are closely related to the cost and benefit of college education. 
+
+The team wishes to help college applicants make more educated decisions to make the most out of their education through this project.
+
+
