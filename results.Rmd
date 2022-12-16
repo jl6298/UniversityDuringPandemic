@@ -5,7 +5,9 @@
 The first thing we care about is the admission. Did the pandemic influence the number of admission? Is admission rate related to the gender and institution type? Did the pandemic influence the admission standard? In this part, we plotted four graphs and got some insights relating to the admission.
 
 ### Number of admission according to gender and institution type in 2017-2021
-```{r}
+
+
+```{r, echo = FALSE}
 Admission_Gender <- Admission %>% filter(Gender != "T")
 stack_bar_gender_population <- ggplot(Admission_Gender, aes(fill=Gender, y= Admssn, x=Year)) + 
   geom_bar(position="stack", stat="identity") +
@@ -18,7 +20,7 @@ stack_bar_gender_population
 From the graph of admission number, we found that the public institution has the highest total admission number and the private for-profit institution has the lowest total admission number. Observing the data of different years, we can find that the total admission number increased over 2017 to 2021 for public and private non-profit institution, while the total admission number for private for-profit institution decreased in 2021. In the view of different genders, we can see that the total number of admission woman is larger than that of admission man for all types of institution in every year. 
 
 ### Admission rate according to institution type in 2017-2021
-```{r}
+```{r, echo = FALSE}
 ggplot(Admission %>% filter(Gender == "T"), aes(x=Institution_type,y=Admssn/Applcn)) +
   geom_boxplot(aes(colour = Year)) +
   ggtitle("Admission rate in different years according to Institution type") +
@@ -30,7 +32,7 @@ We take the admission number divided by the application number as the admission 
 
 
 ### Admission rate according to gender and institution type in 2017-2021
-```{r}
+```{r, echo = FALSE}
 options(dplyr.summarise.inform = FALSE)
 Admission_rate_year_type <- Admission %>%
   filter(Gender != "T",) %>%
@@ -47,7 +49,7 @@ Besides the institution type, we also consider the gender as a factor of admissi
 
 
 ### SAT mean scores according to subjects and institution type in 2017-2021
-```{r}
+```{r, echo = FALSE}
 SAT_score_math <- SAT_score %>%
   group_by(Year, Institution_type) %>%
   summarise(SAT_math = mean(SAT_MT))
@@ -79,7 +81,7 @@ The team explored two parts of students grand. One is the percentage of students
 
 The team divide schools based on institutional type, and for each school, the team binned its percentage of grant receiver into 4 bins in percentile. The team than drawn histogram for percentage of grant receiver faceting over institution type, and the plot is drawn for 5 years from 2017 to 2021. 
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 total_plot_percent_grant
 
 ```
@@ -97,7 +99,7 @@ The public schools has highest variation over the percent of grant receiver.  Un
 
 The team plotted change of average institutional grant provided by schools in each state  in a choropleth map. The map on top is the change of average grant amount from 2017 to 2019, which is regarded as "change before the pandemics". The map on bottom is the change of average grant amount from 2019 to 2021, which is regarded as "change after the pandemics".
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 grid.arrange(Grant_Map_2017_2019, Grant_Map_2019_2021)
 ```
 
@@ -119,37 +121,23 @@ Also we introduce the concept of cost efficiency index calculated by mean earnin
 
 ### tuition ranking per year
 
-```{r}
+```{r, echo = FALSE}
 
-#        by=c('Institution'='Institution.name', 'year' = 'year'))
+
 
 ggplot(df_rank_out_state, aes(x = tuition, y = fct_reorder(Institution.name, Rank, .desc = TRUE))) +
 geom_point() +
 labs(y = "institution", title = "tuition of top 25 universities in 2021")
-#per_year_fee_df[per_year_fee_df$Institution.name == 'California Institute of Technology - Caltech',]
-#per_year_fee_df
-#(per_year_fee_df$Institution.name)
-#table(qs_top_50_count$Institution)
-# top_25_2021$Institution <- as.character(top_25_2021$Institution) 
-# out_state_2021$Institution.name <- as.character(out_state_2021$Institution.name) 
-# summary(top_25_2021)
-# summary(out_state_2021)
-# top_25_2021[top_25_2021$Institution == 'Princeton University']
+
 ```
 This plot explores the relation between institution rank (top 25) and average tuition. From the plot, we can see a approximately linear relationship, 
 that university with high rank tend to have more tuition that university with low rank. This not only can be explained by high quality education requires more cost but also can be explained by the fact that most of the high rank universities are private universities which are generally have more average tuition than public universities.
 
 
-```{r,fig.height=6}
-dev.new(width=200, height=50, unit="px")
-ggplot(rbind(per_year_fee_df_50_instate, per_year_fee_df_50_outstate), aes(x = tuition, y = fct_reorder(Institution.name, tuition, .desc = FALSE))) +
-geom_point(aes(color = tuition_type, alpha = 0.5)) + facet_wrap(~year) +
-labs(y = "institution", title = "In state tuition vs out state tuition in five years")
 
-```
-From this Cleveland dot plot, we can clearly see that in-state tuition is usually less than out-state tuition.
 ### earning v.s. tuition
-```{r}
+
+```{r, echo = FALSE}
 
 ggplot(mean_tuition_df, aes(x = year, y = tuition_mean,fill=tuition_type)) + geom_bar(position="dodge",stat="identity")
 
@@ -157,7 +145,7 @@ ggplot(mean_tuition_df, aes(x = year, y = tuition_mean,fill=tuition_type)) + geo
 We averaged the tuition for each year from last plot (Cleveland dot plot) and drew this bar plot. We can clearly see from this plot that average in-state tuition is less than out-state tuition in any year of these five years. Also, the tuition was gradually increasing over these five years.
 
 
-```{r}
+```{r, echo = FALSE}
 
 ggplot(df_rank_earning_out_state, aes(x = institution_earning_vs_tuition, y = fct_reorder(Institution.name, Rank, .desc = TRUE))) +
 geom_point() +
@@ -165,10 +153,7 @@ labs(y = "institution", title = "cost_efficiency of top 25 universities in 2021"
 ```
 In this cleveland dot plot, we calculated the cost-efficient for each university. From the plot, we know that the top 25 university with highest cost-efficiency is MIT and the university with lowest cost-efficiency will be New York University.
 
-```{r}
-#earning_df$MN_EARN_WNE_P10[earning_df$MN_EARN_WNE_P10 == 'PrivacySuppressed'] <- NA
-earning_df_dropna_tail
-```
+
 
 
 
@@ -193,7 +178,7 @@ The economic impact of pandemic is profound for people fo all social class in US
 
 The team quantifies Racial diversity of each institution using the concept of "Diversity Index" (https://www.ed-data.org/article/Ethnic-Diversity-Index). The index in a university refers to probability that we pick two people of different races if we pick any two people from that university. The team computed diversity index of each school in each state over 2017-2021: A school is considered "High Diversity" is its Diversity Index exceeds 0.5. Otherwise, the school is considered "Low Diversity". The team computer percentage of High Diversity School in each state each year over 2019-2021 as following:
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 grid.arrange(High_Diversity_Percentage_2017_map,
                                     High_Diversity_Percentage_2018_map,
                                     High_Diversity_Percentage_2019_map,
@@ -208,9 +193,7 @@ Initially the team expect decrease in diversity because Racial minority groups a
 ### Change of Gender Diversity over the Pandemics
 
 To analyze how gender diversity changes during the pandemics, the team divide schools into 3 categories. If a school has its male to female ratio higher than 1.1, the school is categorized as "Male Majority" school. If a school has its male to female ratio between 1.1 and 0.9, the school is categorized as "Neutral" school. If a school has its male to female ratio below 0.9 and above 0, the school is categorized as "Female Majority" school. The team initially assumed the gender demographics is more impervious of economic impact than racial demographics. However, a likert plot of numbers of "Male Majority", "Neutral", and "Female Majority" Schools shows a clear pattern of changing gender demographics.
-```{r, echo=TRUE}
+```{r, echo = FALSE}
 plot(diverging_Enrollment_Gender_All_School)
 ```
-As one can observe, there are steadily increasing numbers of Female Majority school from 2017 to 2021. The number of Male majority School experience only very minor change, and the "White bar" for Gender Neutral School has shrunken. Therefore, it is safe to infer that more and more gender "Neutral" school has become "Female Majority School" over the pandemics. In fact, from the analysis of admission pattern over the pandemics, the team observed that admission of female students indeed experience increase even before the pandemics, though the ratio of admitted male to admitted female students does not seem as as radically as observed in the graph above. Looking more closely, one can see that Increase of Female Majority school took place more readily before the pandemics (before 2019), but shrinking of Neutral category took place more apparently after 2019. The team is yet to conclude what accounts for the more and more Female Majority gender demographics over the pandemics. 
-
-
+As one can observe, there are steadily increasing numbers of Female Majority school from 2017 to 2021. The number of Male majority School experience only very minor change, and the "White bar" for Gender Neutral School has shrunken. Therefore, it is safe to infer that more and more gender "Neutral" school has become "Female Majority School" over the pandemics. In fact, from the analysis of admission pattern over the pandemics, the team observed that admission of female students indeed experience increase even before the pandemics, though the ratio of admitted male to admitted female students does not seem as as radically as observed in the graph above. Looking more closely, one can see that Increase of Female Majority school took place more readily before the pandemics (before 2019), but shrinking of Neutral category took place more apparently after 2019. The team is yet to conclude what accounts for the more and more Female Majority gender demographics over the pandemics.

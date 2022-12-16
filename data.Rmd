@@ -12,7 +12,7 @@ The team assumed good data availability due to the fact that the data is collect
 
 Initially, the team planned to treat student earning as a crucial part of analysis. Nothing reflects education benefit better than student earning for most middle-class and lower-class people who seek social mobility from education. However, the earning data is not available from IPEDS. The team founds earning data from College score card (https://collegescorecard.ed.gov/), a database maintained by U.S. Department of Education who also uses IPEDS data to help college applicants visualize cost and gain of different institutions. However, only one year earning data is available, many of which are also "na". The lack of available data compels team to explore other data patterns and analyze evolution of US education statics over the pandemics without focuing on cost-benefit analysis, which was the team's original intention. 
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 library('cowplot')
 library("colorspace")
 library("choroplethr")
@@ -38,7 +38,7 @@ library("jsonlite")
 ## Cleaning / transformation
 
 We processed admission related data in the “data_admission.R”.
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 
 ## Import and transform institution type
 
@@ -110,7 +110,7 @@ For the admission information, we first removed one column with all NA values an
 
 
 We process Student aid related data in the “Data_Student_Aid.R”
-```{r, echo = False}
+```{r, echo = FALSE}
 
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
 
@@ -286,12 +286,13 @@ For university location, we use UNIT ID as primary key and find all unique combi
 For student aid, after importation,  we first rename columns to more descriptive names. We categorize the type of Institutional grant data into “Percent” (percent of students in a school receiving school aid) and average amount (average amount of aid received by students in a school.) We observe year entries, 2017 to 2021, are column titles. We use pivot longer to put year entries into a single column to clean the data.
 
 We processed cost efficiency related data in the “data_earning&tuition.R”.
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 ## import and transform Tuition
 out_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_out_state.csv", header = TRUE)
 in_state_tuition <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
 total_fee_in_state <- in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
 total_fee_out_state <- out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
+fee_df <- rbind(total_fee_in_state, total_fee_out_state)
 per_year_fee_df <- fee_df %>% pivot_longer(cols=c('X2021', 'X2020', 'X2019', 'X2018', 'X2017'), # the columns(feature names) to be pivoted
                                            names_to='year', # the name of the column of features
                                            values_to='tuition') # the name of the column of values
@@ -334,29 +335,23 @@ mean_tuition_df <- data.frame(
 QS_ranking_2021 <- read.csv("./resources/data_folder/data_Jincheng/QS_ranking_2021.csv", header = TRUE)
 top_25_2021 <- head(QS_ranking_2021, 25)
 top_25_2021$Rank <- as.numeric(top_25_2021$Rank)
-top_25_2021
 df_rank_out_state <-  left_join(top_25_2021, out_state_2021, 
                                 by=c('University_id' = 'Unit.Id'))
-df_rank_out_state
 
 ## import and transform earning data
 
 student_earning <- read.csv("./resources/data_folder/data_Jincheng/Pricetrend_in_state.csv", header = TRUE)
 earning_df <- read.csv("./resources/data_folder/data_Jincheng/Most-Recent-Cohorts-Institution-earning.csv", header = TRUE)%>% subset( select = c(UNITID,INSTNM, MN_EARN_WNE_P10))
 earning_df_dropna <- earning_df %>% subset(MN_EARN_WNE_P10 != 'NULL')
-print(earning_df_dropna)
 earning_df_dropna <- earning_df_dropna %>% drop_na(MN_EARN_WNE_P10)
 earning_df_dropna$MN_EARN_WNE_P10 <- as.numeric(earning_df_dropna$MN_EARN_WNE_P10)
 earning_df_dropna_tail <- tail(earning_df_dropna[order(earning_df_dropna$MN_EARN_WNE_P10),], 100)
 df_rank_earning_out_state <- left_join(df_rank_out_state, earning_df_dropna, 
                                        by=c('University_id' = 'UNITID')) %>% mutate(institution_earning_vs_tuition = MN_EARN_WNE_P10/tuition)
-df_rank_earning_out_state
-#out_state_tuition 
-#in_state_tuition
+
 out_state_ts = out_state_tuition[out_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus out-of-state',]
 in_state_ts = in_state_tuition[in_state_tuition$Type.of.cost...residency..and.student.housing == 'On-campus in-state',]
-#names(out_state_ts)[names(out_state_ts) == 'On-campus out-of-state'] <- 'out_of_state_tuition'
-#names(in_state_ts)[names(in_state_ts) == 'On-campus in-state'] <- 'in_state_tuition'
+
 earning_vs_out_state <- left_join(earning_df_dropna_tail, out_state_ts, 
                                   by=c('UNITID'='Unit.Id'))
 earning_vs_in_state <- left_join(earning_df_dropna_tail, in_state_ts, 
@@ -371,7 +366,7 @@ earning_vs_in_state <- earning_vs_in_state[order(earning_vs_in_state$MN_EARN_WNE
 
 earning_vs_in_state$INSTNM <- factor(earning_vs_in_state$INSTNM)
 earning_vs_in_state$INSTNM <- fct_reorder(earning_vs_in_state$INSTNM, earning_vs_in_state$MN_EARN_WNE_P10, .desc = FALSE)
-earning_vs_in_state
+
 ```
 For QS ranking vs cost efficiency data, we first removed all the rows that have NA on mean earning in Most-Recent-Cohorts-Institution.csv and left-joined Most-Recent-Cohorts-Institution.csv onto top 25 QS ranking, then we used mutate() to create a cost-efficiency column calculated by earning / tuition.
 For Tuition over five years data, we removed the row with NA in the tuition column and pivot-longered the years to now column. Then we used group + mutate to generate mean tuition for different years.
@@ -380,6 +375,8 @@ For tuition vs earning data, we first removed the row with NA in both the tuitio
 We process Diversity related data in the “Data_Diversity.R”. 
 ```{r, echo = FALSE}
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
+
+University_loc <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_loc.csv"))
 
 Enrollment_Race_Data <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
 
@@ -413,6 +410,7 @@ Enrollment_Race_Data <- Enrollment_Race_Data %>%
               values_fill = 0)
 
 Enrollment_Race_Data$UNITID <- as.character(Enrollment_Race_Data$UNITID)
+University_loc$UNITID <- as.character(University_loc$UNITID)
 Enrollment_Race_Data <- inner_join(University_loc, Enrollment_Race_Data, by = c("UNITID"))
 
 Enrollment_Race_Data <- data.frame(Enrollment_Race_Data)
@@ -534,48 +532,6 @@ High_Diversity_Percentage_2021_map <- state_choropleth(Diversity_Data_aggregated
 layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2021_map $layers, function(x) class(x$geom)[1]))
 High_Diversity_Percentage_2021_map $layers[[layer_no]] <- NULL
 
-# This is the code we use to generate diversity histogram in interactive 
-# component. We leave it here for your reference.
-
-#Enrollment_Race_Data_2021 <- Enrollment_Race_Data[, c('UNITID', #'STABBR',"Year", "Institution.name", 'diversity_index')]
-
-#Enrollment_Race_Data_2021$STABBR <- abbr2state(Enrollment_Race_Data_2021$STABBR)
-#Enrollment_Race_Data_2021<- #Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$Year == 2021, ]
-
-
-
-#StateVec <- unique(Enrollment_Race_Data_2021$STABBR)
-#for (values in StateVec){
- # toSave <- ggplot(Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$STABBR == values, ], aes(x=diversity_index)) + 
-#    geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
- #   xlab("Diversity index for schools") +
-#    ylab("School count") +
- #   xlim(0, 1) +
-  #  ggtitle(paste(values)) +
-   # theme(plot.title = element_text(hjust = 0.5), text = element_text(size = #20))
-  
- # ggsave(paste0(values, ".png"), plot = toSave)
-#}
-
-
-
-# This is the code we use to generate  Java script Key-valuye pair in #interactive  component. We leave here for your reference.
-
-#dictionary <- '{'
-#for (row in 1:nrow(Enrollment_Race_Data_2021_Mean)) {
- # if (row == 52) {
-  #  dictionary <- paste0(dictionary, '}')
-   # break;
-  #}
-  #if (row == 51){
-   # dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'", ':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",])
-    
-#  } else {
- #   dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'",':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",], ',')
-#  }
-  
-#}
-
 
 Enrollment_Gender_Data <- Enrollment_Gender_Data %>% rename(
   "UNITID" = "Unit.Id",
@@ -649,6 +605,7 @@ We now run data processing code on missing value.
 
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
 
+University_type <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_type.csv"))
 
 SAT_Data_2017 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2017.xlsx"))
 SAT_Data_2018 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2018.xlsx"))
@@ -904,7 +861,7 @@ Missing_Val_public <- plot_missing(Missing_Val_school_Type [Missing_Val_school_T
 In our data set, the missing data are due to the fact that not every school would provide every piece of data the National Center for Education Statistics(NCES) requires. The team has visualized missing pattern for all types(public, non-profit private, and for-profit private) of schools from 2017 and 2021, but, beside a very slight raise on the percentage of data missing instances, no drastic change of pattern has been observed. The team than evaluated missing pattern for 3 types of institutions, where a conspicuous difference is observed.
 
 Missing pattern for for profit private school:
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 
 Missing_Val_fpPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, for-profit",
                                                                c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
@@ -914,7 +871,7 @@ Missing_Val_fpPrivate
 ```
 The missing pattern for non-profit private schools:
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 Missing_Val_npPrivate <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Private, nonprofit",
                                                                c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
 
@@ -923,7 +880,7 @@ Missing_Val_npPrivate
 ```
 
 The missing pattern for public school:
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 Missing_Val_public <- plot_missing(Missing_Val_school_Type [Missing_Val_school_Type$Institution_type == "Public", 
                                                             c('ACT', 'SAT', 'Admit', 'Insti_Aid', 'In_Tuition', 'Out_Tuition', 'Enrollment')], percent = TRUE)
 

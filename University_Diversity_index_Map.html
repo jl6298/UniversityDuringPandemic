@@ -9,9 +9,7 @@
         stroke-width: 0.5px;
         fill: black;
     }
-    h1.title {
-        text-align: center;
-    }
+   
     div#tooltip {
       position: absolute;
       text-align: center;
@@ -40,7 +38,9 @@
 <h1 class = 'title'>University Diversity Index Map</h1>
 
 <script type="text/javascript">
-const width = 900;
+//const width = 900;
+//const height = 600;
+const width = 800;
 const height = 600;
 const svg = d3.select("body").append("svg")
     .attr("width", width)
@@ -90,9 +90,16 @@ if (error) throw error;
         d3.select('#plot')
                 .remove()
         })
-        .on('mousemove', function() {
+        .on('mousemove', function(event) {
+            var coordinates= d3.mouse(this);
+            console.log(coordinates[0]);
         //d3.select('#tooltip').style('left', (d3.event.pageX+10) + 'px').style('top', (d3.event.pageY+10) + 'px')
-        d3.select('#plot').style('left', (d3.event.pageX+20) + 'px').style('top', (d3.event.pageY-100) + 'px')
+        if (coordinates[0] <= 400) {
+            d3.select('#plot').style('left', (d3.event.pageX+20) + 'px').style('top', (d3.event.pageY-100) + 'px')
+        } else {
+            d3.select('#plot').style('left', (d3.event.pageX-350) + 'px').style('top', (d3.event.pageY-100) + 'px')
+        }
+        
         })
         
         ;
@@ -110,9 +117,63 @@ svg.append("g")
     .style("left","1000px")
     .call(legend);
 </script>
- <p>The choropleth map shows magnitude of Average "Diversity Index" in each state in 2021. The diversity index in each university refers to the probability a person from any race meets another person of different race in the school. 
-    We take the average of each state and shows in this choropleth map. As you click each state, you will see a histogram for the corresponding state, which shows counts of school having different diversity index in that state. We hope this graph will 
-    help readers visualize racial diversity of students in US university during the pandemics.
+
+<p> 
+    The diversity index is a measurement of racial diversity.
+    
+</p>
+
+<p>
+    The Diversity Index in each university refers
+    to the probability a person from any race meets 
+</p>
+
+
+<p>
+    another person of 
+    different race in the school. 
+</p>
+ <p>
+    The choropleth map shows magnitude of Average "Diversity Index" in
+    institutions each state in 2021. 
  </p>
+
+
+<p>
+    We take the average Diversity in institutions of each state in 2021 
+</p>
+ <p>
+    and visualize it using sequential color in this choropleth map.
+ </p>
+ <p>
+    This reflects diversity of states in 2021.
+ </p>
+
+ <p>
+    However, the gist of visualization is to show diversity in each state
+ </p>
+ <p>
+    Does not fluctuate much over the pandemics. 
+ </p>
+
+<p>
+As you click each state, you will see a line chart. The content percentage 
+</p>
+
+<p>
+    of high diversity (index larger than 0.5) institutios in the state.
+ </p>
+
+ 
+
+<p>
+    We hope this graph will help readers visualize racial diversity of students
+    in 
+</p>
+
+<p>
+    US university experiences little to no fluctuation during the pandemics.
+</p>
+  
 </body>
 </html>

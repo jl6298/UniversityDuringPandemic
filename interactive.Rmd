@@ -1,3 +1,4 @@
 # Interactive component
 
 
+<iframe src="University_Diversity_index_Map.html" width="1200" height="900"></iframe>
