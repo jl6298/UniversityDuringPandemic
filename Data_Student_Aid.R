@@ -185,3 +185,5 @@ Grant_Map_2019_2021 <-ggplot(Student_aid_avg_state_2019_2021_Map,aes(x=long, y=l
   scale_fill_continuous_divergingx(palette = 'RdBu', mid = 0) +
   ggtitle("Change of Insti grant 2019-2021")
 
+
+

@@ -19,6 +19,8 @@ library("jsonlite")
 
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
 
+University_loc <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_loc.csv"))
+
 Enrollment_Race_Data <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
 
 Enrollment_Gender_Data <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/Enrollment_Data/Enrollment_Data_Race_Gender.xlsx"))
@@ -51,6 +53,7 @@ Enrollment_Race_Data <- Enrollment_Race_Data %>%
               values_fill = 0)
 
 Enrollment_Race_Data$UNITID <- as.character(Enrollment_Race_Data$UNITID)
+University_loc$UNITID <- as.character(University_loc$UNITID)
 Enrollment_Race_Data <- inner_join(University_loc, Enrollment_Race_Data, by = c("UNITID"))
 
 Enrollment_Race_Data <- data.frame(Enrollment_Race_Data)
@@ -172,48 +175,6 @@ High_Diversity_Percentage_2021_map <- state_choropleth(Diversity_Data_aggregated
 layer_no <- grep("GeomText", sapply(High_Diversity_Percentage_2021_map $layers, function(x) class(x$geom)[1]))
 High_Diversity_Percentage_2021_map $layers[[layer_no]] <- NULL
 
-# This is the code we use to generate diversity histogram in interactive 
-# component. We leave it here for your reference.
-
-#Enrollment_Race_Data_2021 <- Enrollment_Race_Data[, c('UNITID', #'STABBR',"Year", "Institution.name", 'diversity_index')]
-
-#Enrollment_Race_Data_2021$STABBR <- abbr2state(Enrollment_Race_Data_2021$STABBR)
-#Enrollment_Race_Data_2021<- #Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$Year == 2021, ]
-
-
-
-#StateVec <- unique(Enrollment_Race_Data_2021$STABBR)
-#for (values in StateVec){
-# toSave <- ggplot(Enrollment_Race_Data_2021[Enrollment_Race_Data_2021$STABBR == values, ], aes(x=diversity_index)) + 
-#    geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
-#   xlab("Diversity index for schools") +
-#    ylab("School count") +
-#   xlim(0, 1) +
-#  ggtitle(paste(values)) +
-# theme(plot.title = element_text(hjust = 0.5), text = element_text(size = #20))
-
-# ggsave(paste0(values, ".png"), plot = toSave)
-#}
-
-
-
-# This is the code we use to generate  Java script Key-valuye pair in #interactive  component. We leave here for your reference.
-
-#dictionary <- '{'
-#for (row in 1:nrow(Enrollment_Race_Data_2021_Mean)) {
-# if (row == 52) {
-#  dictionary <- paste0(dictionary, '}')
-# break;
-#}
-#if (row == 51){
-# dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'", ':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",])
-
-#  } else {
-#   dictionary <- paste0(dictionary,"\'", Enrollment_Race_Data_2021_Mean[row, "STABBR"],"\'",':', Enrollment_Race_Data_2021_Mean[row, "mean_diversity",], ',')
-#  }
-
-#}
-
 
 Enrollment_Gender_Data <- Enrollment_Gender_Data %>% rename(
   "UNITID" = "Unit.Id",
@@ -268,5 +229,6 @@ Enrollment_Gender_Data_cleaned_Aggregate_rightorder <-
                                                         "Neutral",
                                                         "Male Majority")]
 diverging_Enrollment_Gender_All_School <- HH::likert(Year ~ ., Enrollment_Gender_Data_cleaned_Aggregate_rightorder, main="School demographics")
+
 
 

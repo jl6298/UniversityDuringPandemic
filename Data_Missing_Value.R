@@ -19,6 +19,7 @@ library("jsonlite")
 
 University_info <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_info.csv"))
 
+University_type <- data.frame(read_csv("./resources/data_folder/data_Yudu/University/University_type.csv"))
 
 SAT_Data_2017 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2017.xlsx"))
 SAT_Data_2018 <- data.frame(read_xlsx("./resources/data_folder/data_Yudu/SAT_Score_Data/SAT_Score_2018.xlsx"))
