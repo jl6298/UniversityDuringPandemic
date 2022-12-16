@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>D3 World Map</title>
+    <style>
+    path {
+        stroke: white;
+        stroke-width: 0.5px;
+        fill: black;
+    }
+   
+    div#tooltip {
+      position: absolute;
+      text-align: center;
+      width: 60px;
+      min-height: 28px;
+      padding: 8px 12px;
+      font: 12px sans-serif;
+      background: lightgray;
+      border: 0px;
+      border-radius: 8px;
+      pointer-events: none;
+    }
+    
+    .state:hover {
+        stroke: black;
+        stroke-width: 3;
+        cursor: pointer;
+    }
+    
+    </style>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+</head>
+<body>
+<h1 class = 'title'>University Diversity Index Map</h1>
+
+<script type="text/javascript">
+//const width = 900;
+//const height = 600;
+const width = 800;
+const height = 600;
+const svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+ 
+const projection = d3.geoAlbersUsa()
+    .translate([width / 2, height / 2]) // translate to center of screen
+    .scale([1000]); // scale things down so see entire US
+const colorScale = d3.scaleLinear()
+    .domain([0.2,0.8])
+    .range(['white', 'blue']);
+const diversity = {'Alabama':0.457318215587874,'Alaska':0.609523513953008,'Arizona':0.551914181078901,'Arkansas':0.462484362954301,'California':0.654568855501579,'Colorado':0.600490865139323,'Connecticut':0.598497404398857,'Delaware':0.754109141590019,'District of Columbia':0.363826061576668,'Florida':0.508672921117681,'Georgia':0.533388267939684,'Hawaii':0.736108283973063,'Idaho':0.449378955012408,'Illinois':0.592508385594561,'Indiana':0.487061814741589,'Iowa':0.47387023222381,'Kansas':0.560777727958426,'Kentucky':0.449690910462952,'Louisiana':0.529783412845382,'Maine':0.342961559958367,'Maryland':0.512557771602371,'Massachusetts':0.615249948102269,'Michigan':0.445319336319522,'Minnesota':0.47813754214188,'Mississippi':0.391068296672646,'Missouri':0.466073082999177,'Montana':0.316157653663109,'Nebraska':0.39667990990621,'Nevada':0.747624098569851,'New Hampshire':0.481964991483779,'New Jersey':0.470036251435848,'New Mexico':0.545442102637221,'New York':0.525878862399748,'North Carolina':0.495126049452329,'North Dakota':0.348896708071841,'Ohio':0.451168529802713,'Oklahoma':0.631393444756242,'Oregon':0.602217380319931,'Pennsylvania':0.515231963185517,'Rhode Island':0.427450854289375,'South Carolina':0.460757335170649,'South Dakota':0.389921211057209,'Tennessee':0.505717665649091,'Texas':0.60480591688144,'Utah':0.497645624943412,'Vermont':0.33815334853392,'Virginia':0.501648212182268,'Washington':0.603174218310378,'West Virginia':0.351227567352866,'Wisconsin':0.491302605061564,'Wyoming':0.299516923329475};
+const path = d3.geoPath().projection(projection);
+d3.select('body').append('div').attr('id', 'tooltip').attr('style', 'position: absolute; opacity: 0;');
+d3.json("https://gist.githubusercontent.com/Bradleykingz/3aa5206b6819a3c38b5d73cb814ed470/raw/a476b9098ba0244718b496697c5b350460d32f99/us-states.json", function(error, uState) {
+if (error) throw error;
+    svg.selectAll('path')
+        .data(uState.features)
+        .enter()
+        .append('path')
+        .attr("d", path)
+        .style('fill', (d, i) => colorScale(diversity[uState.features[i].properties["name"]]))
+        .attr('class', 'state')
+        .on('mouseover', function(event, d) {
+        const rad = d3.select(event.currentTarget);
+        console.log(uState.features[d].properties["name"])
+        //console.log(uState.features)
+        var target = document
+            .getElementById("tooltip");
+        const prefix = "./State_Diversity_histogram/"
+        const filetype = ".png"
+        let statename = uState.features[d].properties["name"]
+        let temp = prefix.concat(statename);
+        let filename = temp.concat(filetype)
+        //d3.select('#tooltip').transition().duration(200).style('opacity', 1).text(rad.data())
+        d3.select('body').append("img")
+                .attr('id', 'plot')
+                .attr("x", target.offsetLeft)
+                .attr("y", target.offsetTop)
+                .attr('width', 340)
+                .attr('height', 250)
+                .attr("src", filename)
+                .style("position", "absolute")
+        })
+        .on('mouseout', function() {
+        //d3.select('#tooltip').style('opacity', 0)
+        d3.select('#plot')
+                .remove()
+        })
+        .on('mousemove', function(event) {
+            var coordinates= d3.mouse(this);
+            console.log(coordinates[0]);
+        //d3.select('#tooltip').style('left', (d3.event.pageX+10) + 'px').style('top', (d3.event.pageY+10) + 'px')
+        if (coordinates[0] <= 400) {
+            d3.select('#plot').style('left', (d3.event.pageX+20) + 'px').style('top', (d3.event.pageY-100) + 'px')
+        } else {
+            d3.select('#plot').style('left', (d3.event.pageX-350) + 'px').style('top', (d3.event.pageY-100) + 'px')
+        }
+        
+        })
+        
+        ;
+    }
+    
+);
+
+var legend = d3.legendColor()
+    .scale(colorScale);
+svg.append("g")
+    .attr("class", "legendclass")
+    .attr("transform", "translate(500,10)")
+    .style("position", "absolute")
+    .style("top","500px")
+    .style("left","1000px")
+    .call(legend);
+</script>
+
+<p> 
+    The diversity index is a measurement of racial diversity.
+    
+</p>
+
+<p>
+    The Diversity Index in each university refers
+    to the probability a person from any race meets 
+</p>
+
+
+<p>
+    another person of 
+    different race in the school. 
+</p>
+ <p>
+    The choropleth map shows magnitude of Average "Diversity Index" in
+    institutions each state in 2021. 
+ </p>
+
+
+<p>
+    We take the average Diversity in institutions of each state in 2021 
+</p>
+ <p>
+    and visualize it using sequential color in this choropleth map.
+ </p>
+ <p>
+    This reflects diversity of states in 2021.
+ </p>
+
+ <p>
+    However, the gist of visualization is to show diversity in each state
+ </p>
+ <p>
+    Does not fluctuate much over the pandemics. 
+ </p>
+
+<p>
+As you click each state, you will see a line chart. The content percentage 
+</p>
+
+<p>
+    of high diversity (index larger than 0.5) institutios in the state.
+ </p>
+
+ 
+
+<p>
+    We hope this graph will help readers visualize racial diversity of students
+    in 
+</p>
+
+<p>
+    US university experiences little to no fluctuation during the pandemics.
+</p>
+  
+</body>
+</html>
